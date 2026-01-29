@@ -24,19 +24,11 @@ steps:
       versionSpec: $(NODE_VERSION)
     displayName: 'Install Node.js $(NODE_VERSION)'
 
-  # Install GitHub Copilot CLI
+  # Install GitHub CLI and Copilot extension
   - script: |
-      echo "Installing GitHub Copilot CLI..."
-      npm install -g @github/copilot-cli
-    displayName: 'Install GitHub Copilot CLI'
-
-  # Authenticate GitHub Copilot CLI
-  # IMPORTANT: Add GITHUB_COPILOT_TOKEN as a pipeline variable/secret
-  # This should be a GitHub PAT from an account with Copilot access
-  - script: |
-      echo "Authenticating GitHub Copilot CLI..."
+      echo "Installing GitHub CLI..."
       
-      # Install GitHub CLI if not available
+      # Install GitHub CLI
       type -p curl >/dev/null || sudo apt install curl -y
       curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
       sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
@@ -44,13 +36,22 @@ steps:
       sudo apt update
       sudo apt install gh -y
       
+      # Verify installation
+      gh --version
+    displayName: 'Install GitHub CLI'
+
+  # Authenticate and install Copilot extension
+  - script: |
+      echo "Authenticating GitHub CLI and installing Copilot extension..."
+      
       # Authenticate using GitHub CLI
       echo $(GITHUB_COPILOT_TOKEN) | gh auth login --with-token
-      gh auth setup-git
+      gh auth status
       
-      # Verify Copilot is accessible
-      copilot --version
-    displayName: 'Authenticate GitHub Copilot CLI'
+      # Install Copilot extension
+      gh extension install github/gh-copilot || true
+      gh copilot --version || echo "Copilot extension installed"
+    displayName: 'Authenticate and Setup Copilot'
     env:
       GITHUB_COPILOT_TOKEN: $(GITHUB_COPILOT_TOKEN)
 

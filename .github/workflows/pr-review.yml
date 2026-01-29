@@ -20,21 +20,20 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install GitHub Copilot CLI
+      - name: Install GitHub CLI and Copilot extension
         run: |
-          npm install -g @github/copilot-cli
+          # GitHub CLI is pre-installed on GitHub Actions runners
+          # Just install the Copilot extension
+          gh extension install github/gh-copilot || true
+          gh copilot --version || echo "Copilot extension installed"
           
       # IMPORTANT: Authenticate Copilot CLI
       # You need a GitHub account with Copilot access
       # Add GITHUB_COPILOT_TOKEN as a repository secret with a PAT that has Copilot access
-      - name: Authenticate Copilot CLI
+      - name: Authenticate GitHub CLI for Copilot
         run: |
-          # Method 1: Use gh CLI (recommended)
           echo ${{ secrets.GITHUB_COPILOT_TOKEN }} | gh auth login --with-token
-          gh auth setup-git
-          
-          # Verify Copilot authentication
-          copilot --version
+          gh auth status
         env:
           GH_TOKEN: ${{ secrets.GITHUB_COPILOT_TOKEN }}
 

@@ -13,9 +13,10 @@ An AI-powered CLI tool that uses **GitHub Copilot SDK** to perform intelligent c
 ## Prerequisites
 
 1. **Node.js** >= 18.0.0
-2. **GitHub Copilot CLI** installed and configured
-   - Install: Follow the [GitHub Copilot CLI installation guide](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli)
-   - Ensure `copilot` is available in your PATH
+2. **GitHub CLI** with Copilot extension
+   - Install GitHub CLI: [GitHub CLI installation guide](https://cli.github.com/manual/installation)
+   - Install Copilot extension: `gh extension install github/gh-copilot`
+   - Authenticate: `gh auth login`
 3. **Platform-specific access token**:
    - **GitHub**: Personal Access Token with `repo` scope
    - **Azure DevOps**: Personal Access Token with Code (Read) and Pull Request Threads (Read & Write)
@@ -219,14 +220,11 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install GitHub Copilot CLI
-        run: npm install -g @github/copilot-cli
-
-      - name: Authenticate Copilot CLI
+      - name: Install GitHub CLI and Copilot extension
+        run: |\n          gh extension install github/gh-copilot || true\n          gh copilot --version\n\n      - name: Authenticate GitHub CLI for Copilot
         run: |
           echo ${{ secrets.GITHUB_COPILOT_TOKEN }} | gh auth login --with-token
-          gh auth setup-git
-          copilot --version
+          gh auth status
         env:
           GH_TOKEN: ${{ secrets.GITHUB_COPILOT_TOKEN }}
 
@@ -381,15 +379,23 @@ The `rule` field should contain clear, specific instructions for the AI to follo
 
 ## Troubleshooting
 
-### "Copilot CLI not found"
+### "GitHub Copilot CLI not found" or "gh copilot command not found"
 
-Make sure the Copilot CLI is installed and in your PATH:
+The tool uses GitHub CLI with the Copilot extension:
 
 ```bash
-copilot --version
-```
+# Install GitHub CLI
+# See: https://cli.github.com/manual/installation
 
-If not installed, follow the [installation guide](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli).
+# Install Copilot extension
+gh extension install github/gh-copilot
+
+# Authenticate
+gh auth login
+
+# Verify
+gh copilot --version
+```
 
 ### "Not authenticated with Copilot" in CI/CD
 
