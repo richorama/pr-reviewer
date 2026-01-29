@@ -192,7 +192,7 @@ The `GITHUB_TOKEN` provided by Actions/Pipelines **cannot** authenticate with Co
    - Click "Generate new token (classic)"
    - Note: "Copilot CI/CD Token"
    - Expiration: Choose your preference
-   - Scopes: You only need basic scopes (the token is for Copilot authentication, not repo access)
+   - **Required Scopes:** Check `repo` and `read:org` (these are required by gh CLI for Copilot authentication)
    - Copy the token
 
 2. **Add the secret to your repository:**
@@ -416,6 +416,7 @@ This is the most common issue. The Copilot CLI needs authentication separate fro
 
 **Solution:**
 1. Create a GitHub Personal Access Token from an account that has Copilot access
+   - **Required scopes:** `repo` and `read:org`
 2. Add it as a secret to your CI/CD platform:
    - **GitHub Actions**: Add as `COPILOT_TOKEN` in repository secrets (Settings → Secrets and variables → Actions → New repository secret)
    - **Azure Pipelines**: Add as `COPILOT_TOKEN` in pipeline variables (mark as secret)
@@ -427,7 +428,7 @@ This is the most common issue. The Copilot CLI needs authentication separate fro
 - They serve different purposes and `GITHUB_TOKEN` doesn't include Copilot API access
 
 **For GitHub:**
-- Ensure your GitHub token has the `repo` scope
+- Ensure your Personal Access Token has the `repo` and `read:org` scopes (required for gh CLI authentication)
 
 **For Azure DevOps:**
 - Ensure your PAT has Code (Read) and Pull Request Threads (Read & Write) permissionsess Token has the correct permissions:

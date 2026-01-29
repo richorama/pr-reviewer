@@ -39,7 +39,7 @@ jobs:
             echo "1. Go to Settings → Secrets and variables → Actions"
             echo "2. Click 'New repository secret'"
             echo "3. Name: COPILOT_TOKEN"
-            echo "4. Value: A Personal Access Token from a GitHub account with Copilot access"
+            echo "4. Value: A Personal Access Token with 'repo' and 'read:org' scopes"
             echo ""
             echo "See README.md for detailed instructions."
             exit 1
