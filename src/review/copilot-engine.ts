@@ -6,24 +6,36 @@ export class CopilotReviewEngine {
   private session: CopilotSession | null = null;
 
   constructor(cliPath?: string) {
+    console.log("Initializing Copilot client...");
+    console.log("CLI Path:", cliPath || "copilot (default)");
+    
     this.client = new CopilotClient({
       cliPath: cliPath || "copilot",
-      logLevel: "error",
+      logLevel: "info", // Changed from "error" to "info" for debugging
     });
   }
 
   async initialize(): Promise<void> {
-    await this.client.start();
-    
-    this.session = await this.client.createSession({
-      model: "gpt-5",
-      systemMessage: {
-        content: `You are an expert code reviewer analyzing pull request changes. 
+    try {
+      console.log("Starting Copilot client...");
+      await this.client.start();
+      console.log("Copilot client started successfully");
+      
+      console.log("Creating Copilot session...");
+      this.session = await this.client.createSession({
+        model: "gpt-5",
+        systemMessage: {
+          content: `You are an expert code reviewer analyzing pull request changes. 
 Your job is to carefully review code changes and check them against specific business rules.
 Be thorough but fair. Provide clear, actionable feedback.
 Format your responses as structured JSON when requested.`,
-      },
-    });
+        },
+      });
+      console.log("Copilot session created successfully");
+    } catch (error) {
+      console.error("Failed to initialize Copilot:", error);
+      throw error;
+    }
   }
 
   async reviewChanges(

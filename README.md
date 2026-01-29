@@ -392,6 +392,26 @@ The `rule` field should contain clear, specific instructions for the AI to follo
 
 ## Troubleshooting
 
+### "Cannot call write after a stream was destroyed" or similar Copilot SDK errors
+
+The Copilot SDK needs to communicate with the GitHub Copilot CLI. Make sure:
+
+1. **GitHub CLI is authenticated**: Run `gh auth status` to verify
+2. **Copilot extension is installed**: Run `gh extension list` to check for `gh-copilot`
+3. **You have Copilot access**: The authenticated GitHub account must have an active Copilot subscription
+
+If running locally:
+```bash
+# Authenticate
+gh auth login
+
+# Install Copilot extension
+gh extension install github/gh-copilot
+
+# Test it
+gh copilot --help
+```
+
 ### "GitHub Copilot CLI not found" or "gh copilot command not found"
 
 The tool uses GitHub CLI with the Copilot extension:
