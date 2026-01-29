@@ -71,57 +71,56 @@ jobs:
 
       - name: Try Copilot CLI auth
         run: |
-          echo "=== Copilot CLI help ==="
-          copilot --help 2>&1 || true
+          echo "=== Check gh CLI auth ==="
+          gh auth status
           
           echo ""
-          echo "=== Checking for auth subcommand ==="
-          copilot auth --help 2>&1 || echo "No auth subcommand available"
+          echo "=== Check what the copilot CLI sees ==="
+          # The copilot CLI is an AI chat tool, not a traditional CLI
+          # It should pick up auth from gh CLI or environment
           
           echo ""
-          echo "=== Trying copilot auth login ==="
-          # The copilot CLI might support auth login
-          echo "${{ secrets.COPILOT_TOKEN }}" | copilot auth login 2>&1 || echo "copilot auth login failed or not available"
+          echo "=== Testing SDK from project directory ==="
+          cd /home/runner/work/pr-reviewer/pr-reviewer
           
-          echo ""
-          echo "=== Trying copilot auth status ==="
-          copilot auth status 2>&1 || echo "No auth status command"
+          cat > test-auth.mjs << 'EOF'
+import { CopilotClient } from "@github/copilot-sdk";
+
+const client = new CopilotClient({ logLevel: "info" });
+
+try {
+  console.log("Starting client...");
+  await client.start();
+  console.log("Client started successfully");
+  
+  console.log("Getting auth status...");
+  const status = await client.getAuthStatus();
+  console.log("Auth status:", JSON.stringify(status, null, 2));
+  
+  if (status.isAuthenticated) {
+    console.log("SUCCESS: Authenticated!");
+    console.log("Listing models...");
+    const models = await client.listModels();
+    console.log("Models:", models.map(m => m.id || m.name));
+  } else {
+    console.log("FAILED: Not authenticated");
+    console.log("Checking environment...");
+    console.log("GH_TOKEN set:", !!process.env.GH_TOKEN);
+    console.log("GITHUB_TOKEN set:", !!process.env.GITHUB_TOKEN);
+  }
+  
+  await client.stop();
+} catch (e) {
+  console.error("Error:", e.message);
+  console.error("Stack:", e.stack);
+  try { await client.stop(); } catch {}
+}
+EOF
           
-          echo ""
-          echo "=== Testing SDK getAuthStatus with debug ==="
-          # Create a simple test script
-          cat > /tmp/test-auth.mjs << 'EOF'
-          import { CopilotClient } from "@github/copilot-sdk";
-          
-          const client = new CopilotClient({ logLevel: "info" });
-          
-          try {
-            console.log("Starting client...");
-            await client.start();
-            console.log("Client started");
-            
-            console.log("Getting auth status...");
-            const status = await client.getAuthStatus();
-            console.log("Auth status:", JSON.stringify(status, null, 2));
-            
-            if (status.isAuthenticated) {
-              console.log("Listing models...");
-              const models = await client.listModels();
-              console.log("Models:", models.map(m => m.id || m.name));
-            }
-            
-            await client.stop();
-          } catch (e) {
-            console.error("Error:", e.message);
-            await client.forceStop?.() || client.stop?.();
-          }
-          EOF
-          
-          node /tmp/test-auth.mjs
+          node test-auth.mjs
         env:
           GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
-          NODE_PATH: /home/runner/work/pr-reviewer/pr-reviewer/node_modules
 
       - name: Run AI Code Review
         run: |
