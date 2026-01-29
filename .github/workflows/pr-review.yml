@@ -59,6 +59,8 @@ jobs:
       - name: Authenticate with GitHub CLI
         run: |
           echo "Authenticating gh CLI with the Copilot token..."
+          # Unset GH_TOKEN temporarily so gh auth login can store credentials
+          unset GH_TOKEN
           echo "${{ secrets.COPILOT_TOKEN }}" | gh auth login --with-token
           gh auth status
           
@@ -66,8 +68,6 @@ jobs:
           echo "Checking Copilot extension..."
           gh extension install github/gh-copilot 2>/dev/null || true
           gh copilot --version || echo "gh copilot not available"
-        env:
-          GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
 
       - name: Try Copilot CLI auth
         run: |
