@@ -30,10 +30,20 @@ export class CopilotReviewEngine {
     const workDir = process.cwd();
     console.log("Working Directory:", workDir);
     
+    // Set environment variables for headless CI operation
+    const env = {
+      ...process.env,
+      // Suppress CLI warnings and errors from stderr
+      NODE_NO_WARNINGS: '1',
+      // CI environment flag
+      CI: 'true',
+    };
+    
     this.client = new CopilotClient({
       cliPath: resolvedCliPath,
       cwd: workDir,
       logLevel: "error", // Use "error" to reduce noise, "info" for debugging
+      env,
     });
   }
 
@@ -56,7 +66,27 @@ export class CopilotReviewEngine {
   async initialize(): Promise<void> {
     try {
       console.log("Starting Copilot client...");
-      await this.client.start();
+      
+      // Suppress stderr during startup (CLI may print warnings)
+      const originalStderr = process.stderr.write;
+      const stderrBuffer: string[] = [];
+      
+      process.stderr.write = function(chunk: any, ...args: any[]): boolean {
+        // Capture but don't display CLI subprocess errors
+        if (typeof chunk === 'string' && chunk.includes('[CLI subprocess]')) {
+          stderrBuffer.push(chunk);
+          return true;
+        }
+        return originalStderr.apply(process.stderr, [chunk, ...args] as any);
+      };
+      
+      try {
+        await this.client.start();
+      } finally {
+        // Restore stderr
+        process.stderr.write = originalStderr;
+      }
+      
       console.log("Copilot client started successfully");
       
       console.log("Creating Copilot session...");
