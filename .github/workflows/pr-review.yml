@@ -47,8 +47,6 @@ jobs:
           
           echo "${{ secrets.COPILOT_TOKEN }}" | gh auth login --with-token
           gh auth status
-        env:
-          GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
 
       - name: Install dependencies and build
         run: |
