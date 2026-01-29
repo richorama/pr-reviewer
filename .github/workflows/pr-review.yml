@@ -52,6 +52,19 @@ jobs:
           which copilot || echo "copilot not in PATH"
           copilot --version || echo "copilot --version failed"
 
+      - name: Authenticate with GitHub CLI
+        run: |
+          echo "Authenticating gh CLI with the Copilot token..."
+          echo "${{ secrets.COPILOT_TOKEN }}" | gh auth login --with-token
+          gh auth status
+          
+          echo ""
+          echo "Checking Copilot extension..."
+          gh extension install github/gh-copilot 2>/dev/null || true
+          gh copilot --version || echo "gh copilot not available"
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+
       - name: Run AI Code Review
         run: |
           node dist/index.js review \
