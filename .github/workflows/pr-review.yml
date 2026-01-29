@@ -51,6 +51,10 @@ jobs:
           echo "Verifying copilot CLI installation..."
           which copilot || echo "copilot not in PATH"
           copilot --version || echo "copilot --version failed"
+          
+          echo ""
+          echo "Available copilot commands:"
+          copilot --help || true
 
       - name: Authenticate with GitHub CLI
         run: |
@@ -64,6 +68,20 @@ jobs:
           gh copilot --version || echo "gh copilot not available"
         env:
           GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+
+      - name: Try Copilot CLI auth
+        run: |
+          echo "Trying copilot CLI auth commands..."
+          copilot auth --help 2>/dev/null || echo "No auth subcommand"
+          copilot auth status 2>/dev/null || echo "No auth status"
+          copilot auth login --help 2>/dev/null || echo "No auth login"
+          
+          # Try with explicit token
+          echo "Testing with GH_TOKEN set..."
+          copilot --help 2>&1 | head -20 || true
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
 
       - name: Run AI Code Review
         run: |
