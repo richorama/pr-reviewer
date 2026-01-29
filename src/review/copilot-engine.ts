@@ -1,5 +1,7 @@
 import { CopilotClient, CopilotSession } from "@github/copilot-sdk";
 import { ReviewCheckConfig, FileChange, ReviewResult } from "../types/index.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
 export class CopilotReviewEngine {
   private client: CopilotClient;
@@ -9,9 +11,13 @@ export class CopilotReviewEngine {
     console.log("Initializing Copilot client...");
     
     // Use the copilot CLI from node_modules if no path provided
+    // Convert import.meta.url to file path for ESM compatibility
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    
     const resolvedCliPath = cliPath || 
       process.env.COPILOT_CLI_PATH || 
-      require('path').resolve(__dirname, '../../node_modules/@github/copilot/index.js');
+      path.resolve(__dirname, '../../node_modules/@github/copilot/index.js');
     
     console.log("CLI Path:", resolvedCliPath);
     
