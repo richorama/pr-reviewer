@@ -69,9 +69,29 @@ export class CopilotReviewEngine {
       
       console.log("Copilot client started successfully");
       
+      // Check authentication status
+      console.log("Checking authentication status...");
+      const authStatus = await this.client.getAuthStatus();
+      console.log("Auth status:", JSON.stringify(authStatus, null, 2));
+      
+      if (!authStatus.isAuthenticated) {
+        throw new Error(`Not authenticated with Copilot. Status: ${authStatus.statusMessage || 'Unknown'}`);
+      }
+      
+      console.log(`Authenticated as: ${authStatus.login} (${authStatus.authType})`);
+      
+      // List available models
+      console.log("Listing available models...");
+      try {
+        const models = await this.client.listModels();
+        console.log("Available models:", models.map(m => m.id || m.name).join(", "));
+      } catch (modelError) {
+        console.log("Could not list models:", modelError instanceof Error ? modelError.message : modelError);
+      }
+      
       console.log("Creating Copilot session...");
+      // Don't specify a model - let Copilot use the default
       this.session = await this.client.createSession({
-        model: "gpt-5",
         systemMessage: {
           content: `You are an expert code reviewer. Respond with JSON only.`,
         },
