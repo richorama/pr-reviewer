@@ -74,9 +74,18 @@ jobs:
           echo "=== Check gh CLI auth ==="
           gh auth status
           echo ""
+          echo "=== gh auth token ==="
+          # This shows what scopes the token has
+          gh auth token 2>&1 || echo "Cannot get token"
+          echo ""
+          echo "=== Testing copilot with GH_TOKEN ==="
+          # Start copilot in background to test auth
+          timeout 5 copilot --server --port 9999 2>&1 || echo "Server exited/timed out"
+          echo ""
           echo "=== Environment check ==="
           echo "GH_TOKEN is set: $([ -n \"$GH_TOKEN\" ] && echo 'yes' || echo 'no')"
           echo "GITHUB_TOKEN is set: $([ -n \"$GITHUB_TOKEN\" ] && echo 'yes' || echo 'no')"
+          echo "GH_TOKEN first 10 chars: ${GH_TOKEN:0:10}..."
         env:
           GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
