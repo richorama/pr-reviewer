@@ -45,7 +45,7 @@ steps:
       echo "Authenticating GitHub CLI and installing Copilot extension..."
       
       # Authenticate using GitHub CLI
-      echo $(GITHUB_COPILOT_TOKEN) | gh auth login --with-token
+      echo $(COPILOT_TOKEN) | gh auth login --with-token
       gh auth status
       
       # Install Copilot extension
@@ -53,7 +53,7 @@ steps:
       gh copilot --version || echo "Copilot extension installed"
     displayName: 'Authenticate and Setup Copilot'
     env:
-      GITHUB_COPILOT_TOKEN: $(GITHUB_COPILOT_TOKEN)
+      COPILOT_TOKEN: $(COPILOT_TOKEN)
 
   # Install dependencies and build the tool
   - script: |

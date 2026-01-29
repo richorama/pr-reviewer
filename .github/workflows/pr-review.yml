@@ -27,15 +27,28 @@ jobs:
           gh extension install github/gh-copilot || true
           gh copilot --version || echo "Copilot extension installed"
           
-      # IMPORTANT: Authenticate Copilot CLI
+      # IMPORTANT: Authenticate GitHub CLI for Copilot
       # You need a GitHub account with Copilot access
-      # Add GITHUB_COPILOT_TOKEN as a repository secret with a PAT that has Copilot access
+      # Add COPILOT_TOKEN as a repository secret with a PAT that has Copilot access
       - name: Authenticate GitHub CLI for Copilot
         run: |
-          echo ${{ secrets.GITHUB_COPILOT_TOKEN }} | gh auth login --with-token
+          if [ -z "${{ secrets.COPILOT_TOKEN }}" ]; then
+            echo "❌ ERROR: COPILOT_TOKEN secret is not set!"
+            echo ""
+            echo "To fix this:"
+            echo "1. Go to Settings → Secrets and variables → Actions"
+            echo "2. Click 'New repository secret'"
+            echo "3. Name: COPILOT_TOKEN"
+            echo "4. Value: A Personal Access Token from a GitHub account with Copilot access"
+            echo ""
+            echo "See README.md for detailed instructions."
+            exit 1
+          fi
+          
+          echo "${{ secrets.COPILOT_TOKEN }}" | gh auth login --with-token
           gh auth status
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
 
       - name: Install dependencies and build
         run: |

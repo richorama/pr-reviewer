@@ -183,16 +183,29 @@ The `GITHUB_TOKEN` provided by Actions/Pipelines **cannot** authenticate with Co
 ### GitHub Actions
 
 **Required Secrets:**
-- `GITHUB_COPILOT_TOKEN` - ⚠️ **YOU MUST CREATE** - Personal Access Token from a Copilot-enabled account
+- `COPILOT_TOKEN` - ⚠️ **YOU MUST CREATE** - Personal Access Token from a Copilot-enabled account
 - `GITHUB_TOKEN` - ✅ **AUTOMATIC** - Provided by GitHub Actions (no setup needed)
 
 **Setup Steps:**
-1. Get a PAT from a GitHub account with Copilot access
-2. Add it as a repository secret named `GITHUB_COPILOT_TOKEN`
+1. **Create a Personal Access Token:**
+   - Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+   - Click "Generate new token (classic)"
+   - Note: "Copilot CI/CD Token"
+   - Expiration: Choose your preference
+   - Scopes: You only need basic scopes (the token is for Copilot authentication, not repo access)
+   - Copy the token
+
+2. **Add the secret to your repository:**
+   - Go to your repository → Settings → Secrets and variables → Actions
+   - Click "New repository secret"
+   - Name: `COPILOT_TOKEN`
+   - Value: Paste your PAT
+   - Click "Add secret"
+
 3. The workflow is already in place at `.github/workflows/pr-review.yml`
 
 **What each secret does:**
-- `GITHUB_COPILOT_TOKEN` - Authenticates with GitHub Copilot's AI service to run code analysis
+- `COPILOT_TOKEN` - Authenticates with GitHub Copilot's AI service to run code analysis
 - `GITHUB_TOKEN` - Accesses the PR (read files, post comments) - automatically provided with correct permissions
 
 Create `.github/workflows/pr-review.yml`:
@@ -259,7 +272,7 @@ jobs:
 **Setup Steps:**
 1. Get a GitHub PAT from an account with Copilot access (Settings → Developer settings → Personal access tokens)
 2. In Azure DevOps, go to Pipelines → Library → Variable groups (or add directly to pipeline)
-3. Add a variable named `GITHUB_COPILOT_TOKEN` with your PAT value (check "Keep this value secret")
+3. Add a variable named `COPILOT_TOKEN` with your PAT value (check "Keep this value secret")
 4. Use the pipeline below:
 
 See [azure-pipelines.yml](./azure-pipelines.yml) for the complete pipeline configuration.
@@ -404,13 +417,13 @@ This is the most common issue. The Copilot CLI needs authentication separate fro
 **Solution:**
 1. Create a GitHub Personal Access Token from an account that has Copilot access
 2. Add it as a secret to your CI/CD platform:
-   - **GitHub Actions**: Add as `GITHUB_COPILOT_TOKEN` in repository secrets (Settings → Secrets and variables → Actions → New repository secret)
-   - **Azure Pipelines**: Add as `GITHUB_COPILOT_TOKEN` in pipeline variables (mark as secret)
+   - **GitHub Actions**: Add as `COPILOT_TOKEN` in repository secrets (Settings → Secrets and variables → Actions → New repository secret)
+   - **Azure Pipelines**: Add as `COPILOT_TOKEN` in pipeline variables (mark as secret)
 3. The workflow will use this to authenticate via `gh auth login`
 
 **Why do I need TWO tokens in GitHub Actions?**
 - `GITHUB_TOKEN` (automatic) - For accessing the PR (reading code, posting comments)
-- `GITHUB_COPILOT_TOKEN` (manual) - For accessing GitHub Copilot's AI service
+- `COPILOT_TOKEN` (manual) - For accessing GitHub Copilot's AI service
 - They serve different purposes and `GITHUB_TOKEN` doesn't include Copilot API access
 
 **For GitHub:**
@@ -436,9 +449,9 @@ This can happen if:
 | **PR Metadata** | ✅ `GITHUB_TOKEN` (auto) | ✅ `System.AccessToken` (auto) |
 | **PR Files/Diffs** | ✅ `GITHUB_TOKEN` (auto) | ✅ `System.AccessToken` (auto) |
 | **Post Comments** | ✅ `GITHUB_TOKEN` (auto) | ✅ `System.AccessToken` (auto) |
-| **Copilot CLI Auth** | ⚠️ `GITHUB_COPILOT_TOKEN` (manual) | ⚠️ `GITHUB_COPILOT_TOKEN` (manual) |
+| **Copilot CLI Auth** | ⚠️ `COPILOT_TOKEN` (manual) | ⚠️ `COPILOT_TOKEN` (manual) |
 
-**Summary:** Only ONE secret needs manual setup (`GITHUB_COPILOT_TOKEN`). The platform's default tokens handle PR access automatically.
+**Summary:** Only ONE secret needs manual setup (`COPILOT_TOKEN`). The platform's default tokens handle PR access automatically.
 
 ## Contributing
 

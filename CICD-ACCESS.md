@@ -37,8 +37,8 @@ The GitHub Copilot CLI (which powers the AI analysis) needs to authenticate with
    - Scope: Just basic access is needed (the token is used for Copilot CLI auth, not repo access)
    
 2. **Add it as a secret:**
-   - **GitHub Actions**: Repository Settings → Secrets → Add `GITHUB_COPILOT_TOKEN`
-   - **Azure Pipelines**: Pipeline → Variables → Add `GITHUB_COPILOT_TOKEN` (mark as secret)
+   - **GitHub Actions**: Repository Settings → Secrets → Add `COPILOT_TOKEN`
+   - **Azure Pipelines**: Pipeline → Variables → Add `COPILOT_TOKEN` (mark as secret)
 
 3. **The workflow handles the rest**
    - Installs `gh` CLI
@@ -55,7 +55,7 @@ steps:
     # Uses GITHUB_TOKEN (auto) to fetch code
     
   - name: Authenticate Copilot CLI
-    run: echo ${{ secrets.GITHUB_COPILOT_TOKEN }} | gh auth login --with-token
+    run: echo ${{ secrets.COPILOT_TOKEN }} | gh auth login --with-token
     # Uses your manual secret to auth Copilot
     
   - name: Run Review
@@ -76,7 +76,7 @@ steps:
 ```yaml
 # PR opened → Azure Pipeline triggered
 steps:
-  - script: echo $(GITHUB_COPILOT_TOKEN) | gh auth login --with-token
+  - script: echo $(COPILOT_TOKEN) | gh auth login --with-token
     # Uses your manual secret to auth Copilot
     
   - script: |
@@ -103,7 +103,7 @@ steps:
 ## Common Issues
 
 ### ❌ "Authentication required for Copilot"
-**Cause**: Missing or invalid `COPILOT_GITHUB_TOKEN` / `GITHUB_COPILOT_TOKEN`
+**Cause**: Missing or invalid `COPILOT_TOKEN`
 **Fix**: Add the secret with a valid PAT from a Copilot-enabled account
 
 ### ❌ "No Copilot subscription"
@@ -124,6 +124,6 @@ steps:
 - ✅ PR data: Accessed automatically via platform tokens
 - ✅ File changes: Accessed automatically via platform tokens  
 - ✅ Post comments: Accessed automatically via platform tokens
-- ⚠️ Copilot AI: Requires a one-time setup of `GITHUB_COPILOT_TOKEN` secret
+- ⚠️ Copilot AI: Requires a one-time setup of `COPILOT_TOKEN` secret
 
 Once the secret is added (same name for both platforms!), it works seamlessly for all PRs! 🎉
