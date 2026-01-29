@@ -2,6 +2,8 @@ import { CopilotClient, CopilotSession } from "@github/copilot-sdk";
 import { ReviewCheckConfig, FileChange, ReviewResult } from "../types/index.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
+import os from "os";
 
 export class CopilotReviewEngine {
   private client: CopilotClient;
@@ -9,6 +11,9 @@ export class CopilotReviewEngine {
 
   constructor(cliPath?: string) {
     console.log("Initializing Copilot client...");
+    
+    // Ensure required directories exist for Copilot CLI
+    this.ensureCopilotDirectories();
     
     // Use the copilot CLI from node_modules if no path provided
     // Convert import.meta.url to file path for ESM compatibility
@@ -21,10 +26,31 @@ export class CopilotReviewEngine {
     
     console.log("CLI Path:", resolvedCliPath);
     
+    // Set working directory for Copilot CLI to avoid path issues
+    const workDir = process.cwd();
+    console.log("Working Directory:", workDir);
+    
     this.client = new CopilotClient({
       cliPath: resolvedCliPath,
-      logLevel: "info", // Changed from "error" to "info" for debugging
+      cwd: workDir,
+      logLevel: "error", // Use "error" to reduce noise, "info" for debugging
     });
+  }
+
+  private ensureCopilotDirectories(): void {
+    try {
+      // Ensure ~/.copilot directory exists
+      const homeDir = os.homedir();
+      const copilotDir = path.join(homeDir, '.copilot');
+      
+      if (!fs.existsSync(copilotDir)) {
+        console.log(`Creating Copilot config directory: ${copilotDir}`);
+        fs.mkdirSync(copilotDir, { recursive: true });
+      }
+    } catch (error) {
+      console.warn("Warning: Could not create Copilot directories:", error);
+      // Don't fail - let Copilot CLI handle it
+    }
   }
 
   async initialize(): Promise<void> {
