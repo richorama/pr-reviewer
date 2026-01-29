@@ -20,23 +20,10 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install GitHub CLI and Copilot extension
-        run: |
-          # GitHub CLI is pre-installed on GitHub Actions runners
-          # Just install the Copilot extension
-          gh extension install github/gh-copilot || true
-          
-          # Verify installation
-          echo "Checking gh copilot installation..."
-          gh extension list
-          gh copilot --help || echo "Warning: gh copilot command not working"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      # IMPORTANT: Authenticate GitHub CLI for Copilot
+      # IMPORTANT: Set Copilot authentication
       # You need a GitHub account with Copilot access
       # Add COPILOT_TOKEN as a repository secret with a PAT that has Copilot access
-      - name: Authenticate GitHub CLI for Copilot
+      - name: Setup Copilot Authentication
         run: |
           if [ -z "${{ secrets.COPILOT_TOKEN }}" ]; then
             echo "❌ ERROR: COPILOT_TOKEN secret is not set!"
@@ -45,18 +32,13 @@ jobs:
             echo "1. Go to Settings → Secrets and variables → Actions"
             echo "2. Click 'New repository secret'"
             echo "3. Name: COPILOT_TOKEN"
-            echo "4. Value: A Personal Access Token with 'repo' and 'read:org' scopes"
+            echo "4. Value: A Personal Access Token with 'copilot' scope"
             echo ""
             echo "See README.md for detailed instructions."
             exit 1
           fi
           
-          echo "${{ secrets.COPILOT_TOKEN }}" | gh auth login --with-token
-          gh auth status
-          
-          # Verify Copilot access
-          echo "Verifying Copilot CLI access..."
-          gh copilot --help || echo "Warning: Copilot CLI access issue"
+          echo "✅ COPILOT_TOKEN is configured"
 
       - name: Install dependencies and build
         run: |
@@ -65,10 +47,6 @@ jobs:
 
       - name: Run AI Code Review
         run: |
-          echo "Starting review with debug mode..."
-          echo "GitHub CLI auth status:"
-          gh auth status
-          
           node dist/index.js review \
             --platform github \
             --github-token ${{ secrets.GITHUB_TOKEN }} \
@@ -78,8 +56,8 @@ jobs:
             --post-comment \
             --output review-report.md
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEBUG: "*"
+          GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
 
       - name: Upload Review Report
         uses: actions/upload-artifact@v4

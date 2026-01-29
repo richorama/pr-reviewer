@@ -24,36 +24,14 @@ steps:
       versionSpec: $(NODE_VERSION)
     displayName: 'Install Node.js $(NODE_VERSION)'
 
-  # Install GitHub CLI and Copilot extension
+  # Setup Copilot Authentication
   - script: |
-      echo "Installing GitHub CLI..."
-      
-      # Install GitHub CLI
-      type -p curl >/dev/null || sudo apt install curl -y
-      curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-      sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-      echo "deb [arch=$(dpkg --arch) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-      sudo apt update
-      sudo apt install gh -y
-      
-      # Verify installation
-      gh --version
-    displayName: 'Install GitHub CLI'
-
-  # Authenticate and install Copilot extension
-  - script: |
-      echo "Authenticating GitHub CLI and installing Copilot extension..."
-      
-      # Authenticate using GitHub CLI
-      echo $(COPILOT_TOKEN) | gh auth login --with-token
-      gh auth status
-      
-      # Install Copilot extension
-      gh extension install github/gh-copilot || true
-      gh copilot --version || echo "Copilot extension installed"
-    displayName: 'Authenticate and Setup Copilot'
+      echo "Setting up Copilot authentication..."
+      echo "✅ COPILOT_TOKEN environment variable configured"
+    displayName: 'Setup Copilot Authentication'
     env:
-      COPILOT_TOKEN: $(COPILOT_TOKEN)
+      GH_TOKEN: $(COPILOT_TOKEN)
+      GITHUB_TOKEN: $(COPILOT_TOKEN)
 
   # Install dependencies and build the tool
   - script: |
@@ -90,6 +68,8 @@ steps:
     displayName: 'Run AI Code Review'
     condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
     env:
+      GH_TOKEN: $(COPILOT_TOKEN)
+      GITHUB_TOKEN: $(COPILOT_TOKEN)
       REVIEW_CONFIG_PATH: '$(Build.SourcesDirectory)/review-config.json'
 
   # Publish the review report as a build artifact

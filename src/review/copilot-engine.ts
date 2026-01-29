@@ -7,10 +7,16 @@ export class CopilotReviewEngine {
 
   constructor(cliPath?: string) {
     console.log("Initializing Copilot client...");
-    console.log("CLI Path:", cliPath || "copilot (default)");
+    
+    // Use the copilot CLI from node_modules if no path provided
+    const resolvedCliPath = cliPath || 
+      process.env.COPILOT_CLI_PATH || 
+      require('path').resolve(__dirname, '../../node_modules/@github/copilot/index.js');
+    
+    console.log("CLI Path:", resolvedCliPath);
     
     this.client = new CopilotClient({
-      cliPath: cliPath || "copilot",
+      cliPath: resolvedCliPath,
       logLevel: "info", // Changed from "error" to "info" for debugging
     });
   }
