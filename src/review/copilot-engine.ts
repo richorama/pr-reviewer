@@ -127,60 +127,42 @@ Format your responses as structured JSON when requested.`,
       throw new Error("Session not available");
     }
 
-    // Prepare file changes summary
+    // Prepare a concise file changes summary (limit to avoid huge prompts)
     const changesContext = fileChanges
-      .map((fc) => {
-        const lines = fc.content ? `(${fc.content.split("\n").length} lines)` : "";
-        return `- ${fc.changeType.toUpperCase()}: ${fc.path} ${lines}`;
-      })
+      .slice(0, 5) // Limit to first 5 files
+      .map((fc) => `- ${fc.changeType.toUpperCase()}: ${fc.path}`)
       .join("\n");
 
-    // Prepare detailed content for analysis
-    const detailedContent = fileChanges
-      .filter((fc) => fc.content) // Only include files with content
-      .slice(0, 10) // Limit to first 10 files to avoid token limits
+    // Prepare a very limited content sample to keep prompt small
+    const contentSample = fileChanges
+      .filter((fc) => fc.content)
+      .slice(0, 3) // Only first 3 files
       .map((fc) => {
-        return `
-=== File: ${fc.path} (${fc.changeType}) ===
-${fc.content}
-`;
+        // Limit content to first 50 lines
+        const lines = fc.content?.split("\\n").slice(0, 50).join("\\n") || "";
+        return `=== ${fc.path} ===\\n${lines}`;
       })
-      .join("\n");
+      .join("\\n\\n");
 
-    const prompt = `
-You are reviewing a pull request. Analyze the following code changes against this specific rule:
+    // Keep prompt concise
+    const prompt = `Review these code changes for: ${check.name}
 
-**Check Name:** ${check.name}
-**Description:** ${check.description}
-**Severity:** ${check.severity}
+Rule: ${check.description}
 
-**Rule to Apply:**
-${check.rule}
-
-**Files Changed:**
+Files changed:
 ${changesContext}
 
-**Detailed File Contents (sample):**
-${detailedContent || "No file contents available"}
+Sample content:
+${contentSample.substring(0, 2000)}
 
-Analyze the changes and return a JSON array of findings. Each finding should have:
-{
-  "passed": boolean (true if no issues found for this aspect),
-  "message": "Brief description of the finding",
-  "details": "Detailed explanation (optional)",
-  "file": "File path where issue was found (optional)",
-  "line": line number if applicable (optional)
-}
+Return JSON array: [{"passed": true/false, "message": "finding"}]
+If no issues: [{"passed": true, "message": "Check passed"}]
+JSON only:`;
 
-If the check passes completely with no issues, return: [{"passed": true, "message": "Check passed"}]
-If there are issues, return one object per issue found.
-
-Return ONLY the JSON array, no other text.
-`;
+    console.log(`  Sending prompt (${prompt.length} chars)...`);
 
     const response = await this.session.sendAndWait({
       prompt,
-      mode: "immediate",
     });
 
     if (!response || !response.data.content) {
