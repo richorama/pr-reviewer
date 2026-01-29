@@ -67,25 +67,20 @@ export class CopilotReviewEngine {
     try {
       console.log("Starting Copilot client...");
       
-      // Suppress stderr during startup (CLI may print warnings)
-      const originalStderr = process.stderr.write;
-      const stderrBuffer: string[] = [];
-      
-      process.stderr.write = function(chunk: any, ...args: any[]): boolean {
-        // Capture but don't display CLI subprocess errors
-        if (typeof chunk === 'string' && chunk.includes('[CLI subprocess]')) {
-          stderrBuffer.push(chunk);
-          return true;
-        }
-        return originalStderr.apply(process.stderr, [chunk, ...args] as any);
-      };
-      
-      try {
-        await this.client.start();
-      } finally {
-        // Restore stderr
-        process.stderr.write = originalStderr;
+      // Check authentication before starting
+      if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) {
+        throw new Error("No authentication token found. Set GH_TOKEN or GITHUB_TOKEN environment variable.");
       }
+      
+      console.log("Authentication token is set:", process.env.GH_TOKEN ? "GH_TOKEN" : "GITHUB_TOKEN");
+      
+      // Add timeout to prevent hanging
+      const startPromise = this.client.start();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Copilot client start timed out after 30 seconds")), 30000)
+      );
+      
+      await Promise.race([startPromise, timeoutPromise]);
       
       console.log("Copilot client started successfully");
       
