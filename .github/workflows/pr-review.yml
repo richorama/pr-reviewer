@@ -30,6 +30,8 @@ jobs:
           echo "Checking gh copilot installation..."
           gh extension list
           gh copilot --help || echo "Warning: gh copilot command not working"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
       # IMPORTANT: Authenticate GitHub CLI for Copilot
       # You need a GitHub account with Copilot access
