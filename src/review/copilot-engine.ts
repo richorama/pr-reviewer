@@ -73,12 +73,20 @@ export class CopilotReviewEngine {
       this.session = await this.client.createSession({
         model: "gpt-5",
         systemMessage: {
-          content: `You are an expert code reviewer analyzing pull request changes. 
-Your job is to carefully review code changes and check them against specific business rules.
-Be thorough but fair. Provide clear, actionable feedback.
-Format your responses as structured JSON when requested.`,
+          content: `You are an expert code reviewer. Respond with JSON only.`,
         },
       });
+      
+      // Add event listener to see what's happening
+      this.session.on((event) => {
+        const eventData = event.type === 'assistant.message' 
+          ? (event.data as any)?.content?.substring(0, 100) + '...'
+          : event.type === 'session.error' 
+            ? JSON.stringify(event.data)
+            : '';
+        console.log(`  [Event] ${event.type}`, eventData ? `: ${eventData}` : '');
+      });
+      
       console.log("Copilot session created successfully");
     } catch (error) {
       console.error("Failed to initialize Copilot:", error);
@@ -160,23 +168,32 @@ If no issues: [{"passed": true, "message": "Check passed"}]
 JSON only:`;
 
     console.log(`  Sending prompt (${prompt.length} chars)...`);
-
-    const response = await this.session.sendAndWait({
-      prompt,
-    });
-
-    if (!response || !response.data.content) {
-      return [{
-        checkName: check.name,
-        passed: false,
-        severity: check.severity,
-        message: "No response from Copilot",
-      }];
-    }
-
+    console.log(`  Waiting for response (timeout: 60s)...`);
+    
+    const startTime = Date.now();
+    
     try {
+      const response = await this.session.sendAndWait({
+        prompt,
+      });
+      
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`  Response received in ${duration}s`);
+
+      if (!response || !response.data.content) {
+        console.log(`  Warning: Empty response from Copilot`);
+        return [{
+          checkName: check.name,
+          passed: false,
+          severity: check.severity,
+          message: "No response from Copilot",
+        }];
+      }
+
       // Extract JSON from response
       const content = response.data.content.trim();
+      console.log(`  Response content (first 200 chars): ${content.substring(0, 200)}`);
+      
       let jsonStr = content;
       
       // Try to extract JSON if it's wrapped in markdown code blocks
@@ -201,16 +218,15 @@ JSON only:`;
         line: finding.line,
       }));
     } catch (error) {
-      console.error(`Failed to parse Copilot response for ${check.name}:`, error);
-      console.error("Response was:", response.data.content);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.error(`  Failed after ${duration}s:`, error instanceof Error ? error.message : error);
       
-      // Fallback: interpret response as text
+      // Fallback: return error result
       return [{
         checkName: check.name,
         passed: false,
         severity: check.severity,
-        message: "Could not parse review results",
-        details: response.data.content,
+        message: `Check failed: ${error instanceof Error ? error.message : String(error)}`,
       }];
     }
   }
