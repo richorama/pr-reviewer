@@ -181,10 +181,18 @@ The `GITHUB_TOKEN` provided by Actions/Pipelines **cannot** authenticate with Co
 
 ### GitHub Actions
 
+**Required Secrets:**
+- `GITHUB_COPILOT_TOKEN` - ⚠️ **YOU MUST CREATE** - Personal Access Token from a Copilot-enabled account
+- `GITHUB_TOKEN` - ✅ **AUTOMATIC** - Provided by GitHub Actions (no setup needed)
+
 **Setup Steps:**
 1. Get a PAT from a GitHub account with Copilot access
 2. Add it as a repository secret named `GITHUB_COPILOT_TOKEN`
-3. Use the workflow below:
+3. The workflow is already in place at `.github/workflows/pr-review.yml`
+
+**What each secret does:**
+- `GITHUB_COPILOT_TOKEN` - Authenticates with GitHub Copilot's AI service to run code analysis
+- `GITHUB_TOKEN` - Accesses the PR (read files, post comments) - automatically provided with correct permissions
 
 Create `.github/workflows/pr-review.yml`:
 
@@ -390,14 +398,14 @@ This is the most common issue. The Copilot CLI needs authentication separate fro
 **Solution:**
 1. Create a GitHub Personal Access Token from an account that has Copilot access
 2. Add it as a secret to your CI/CD platform:
-   - **GitHub Actions**: Add as `GITHUB_COPILOT_TOKEN` in repository secrets
+   - **GitHub Actions**: Add as `GITHUB_COPILOT_TOKEN` in repository secrets (Settings → Secrets and variables → Actions → New repository secret)
    - **Azure Pipelines**: Add as `GITHUB_COPILOT_TOKEN` in pipeline variables (mark as secret)
 3. The workflow will use this to authenticate via `gh auth login`
 
-**Why is this needed?**
-- GitHub Actions' `GITHUB_TOKEN` doesn't include Copilot API access
-- Azure Pipelines' `System.AccessToken` is for Azure DevOps, not GitHub Copilot
-- The Copilot CLI needs to authenticate with a GitHub account that has an active Copilot subscription
+**Why do I need TWO tokens in GitHub Actions?**
+- `GITHUB_TOKEN` (automatic) - For accessing the PR (reading code, posting comments)
+- `GITHUB_COPILOT_TOKEN` (manual) - For accessing GitHub Copilot's AI service
+- They serve different purposes and `GITHUB_TOKEN` doesn't include Copilot API access
 
 **For GitHub:**
 - Ensure your GitHub token has the `repo` scope
@@ -422,9 +430,9 @@ This can happen if:
 | **PR Metadata** | ✅ `GITHUB_TOKEN` (auto) | ✅ `System.AccessToken` (auto) |
 | **PR Files/Diffs** | ✅ `GITHUB_TOKEN` (auto) | ✅ `System.AccessToken` (auto) |
 | **Post Comments** | ✅ `GITHUB_TOKEN` (auto) | ✅ `System.AccessToken` (auto) |
-| **Copilot CLI Auth** | ❌ Need `COPILOT_GITHUB_TOKEN` (manual) | ❌ Need `GITHUB_COPILOT_TOKEN` (manual) |
+| **Copilot CLI Auth** | ⚠️ `GITHUB_COPILOT_TOKEN` (manual) | ⚠️ `GITHUB_COPILOT_TOKEN` (manual) |
 
-**Yes, it can access everything needed** - with one caveat: you must provide a Copilot-enabled GitHub PAT for the AI analysis. The PR data itself is accessible via the platform's built-in tokens.
+**Summary:** Only ONE secret needs manual setup (`GITHUB_COPILOT_TOKEN`). The platform's default tokens handle PR access automatically.
 
 ## Contributing
 
