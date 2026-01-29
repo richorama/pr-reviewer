@@ -20,7 +20,8 @@
   ],
   "author": "",
   "license": "MIT",
-  "dependencies": {    "@github/copilot": "^0.0.398",    "@github/copilot-sdk": "^0.1.19",
+  "dependencies": {
+    "@github/copilot-sdk": "^0.1.19",
     "@octokit/rest": "^20.0.2",
     "azure-devops-node-api": "^12.5.0",
     "commander": "^12.1.0",

@@ -1,7 +1,6 @@
 import { CopilotClient, CopilotSession } from "@github/copilot-sdk";
 import { ReviewCheckConfig, FileChange, ReviewResult } from "../types/index.js";
 import path from "path";
-import { fileURLToPath } from "url";
 import fs from "fs";
 import os from "os";
 
@@ -15,14 +14,10 @@ export class CopilotReviewEngine {
     // Ensure required directories exist for Copilot CLI
     this.ensureCopilotDirectories();
     
-    // Use the copilot CLI from node_modules if no path provided
-    // Convert import.meta.url to file path for ESM compatibility
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
-    
+    // Use the copilot CLI from PATH (installed globally) or custom path
     const resolvedCliPath = cliPath || 
       process.env.COPILOT_CLI_PATH || 
-      path.resolve(__dirname, '../../node_modules/@github/copilot/index.js');
+      'copilot'; // Default: look in PATH
     
     console.log("CLI Path:", resolvedCliPath);
     
@@ -30,23 +25,10 @@ export class CopilotReviewEngine {
     const workDir = process.cwd();
     console.log("Working Directory:", workDir);
     
-    // Set environment variables for headless CI operation
-    const polyfillPath = path.resolve(__dirname, '../../copilot-polyfills.js');
-    const env = {
-      ...process.env,
-      // Inject polyfills into the CLI subprocess
-      NODE_OPTIONS: `--require ${polyfillPath} ${process.env.NODE_OPTIONS || ''}`.trim(),
-      // Suppress CLI warnings and errors from stderr
-      NODE_NO_WARNINGS: '1',
-      // CI environment flag
-      CI: 'true',
-    };
-    
     this.client = new CopilotClient({
       cliPath: resolvedCliPath,
       cwd: workDir,
       logLevel: "error", // Use "error" to reduce noise, "info" for debugging
-      env,
     });
   }
 

@@ -45,6 +45,13 @@ jobs:
           npm ci
           npm run build
 
+      - name: Install Copilot CLI globally
+        run: |
+          npm install -g @github/copilot
+          echo "Verifying copilot CLI installation..."
+          which copilot || echo "copilot not in PATH"
+          copilot --version || echo "copilot --version failed"
+
       - name: Run AI Code Review
         run: |
           node dist/index.js review \
