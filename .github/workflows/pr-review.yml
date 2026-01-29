@@ -1,0 +1,64 @@
+name: AI PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  ai-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install GitHub Copilot CLI
+        run: |
+          npm install -g @github/copilot-cli
+          
+      # IMPORTANT: Authenticate Copilot CLI
+      # You need a GitHub account with Copilot access
+      # Add GITHUB_COPILOT_TOKEN as a repository secret with a PAT that has Copilot access
+      - name: Authenticate Copilot CLI
+        run: |
+          # Method 1: Use gh CLI (recommended)
+          echo ${{ secrets.GITHUB_COPILOT_TOKEN }} | gh auth login --with-token
+          gh auth setup-git
+          
+          # Verify Copilot authentication
+          copilot --version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_COPILOT_TOKEN }}
+
+      - name: Install dependencies and build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Run AI Code Review
+        run: |
+          node dist/index.js review \
+            --platform github \
+            --github-token ${{ secrets.GITHUB_TOKEN }} \
+            --owner ${{ github.repository_owner }} \
+            --repository ${{ github.event.repository.name }} \
+            --pr-id ${{ github.event.pull_request.number }} \
+            --post-comment \
+            --output review-report.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Review Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr-review-report
+          path: review-report.md

@@ -1,0 +1,101 @@
+name: Azure DevOps PR Review
+
+trigger:
+  branches:
+    include:
+      - '*'
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  NODE_VERSION: '18.x'
+
+steps:
+  # Install Node.js
+  - task: NodeTool@0
+    inputs:
+      versionSpec: $(NODE_VERSION)
+    displayName: 'Install Node.js $(NODE_VERSION)'
+
+  # Install GitHub Copilot CLI
+  - script: |
+      echo "Installing GitHub Copilot CLI..."
+      npm install -g @github/copilot-cli
+    displayName: 'Install GitHub Copilot CLI'
+
+  # Authenticate GitHub Copilot CLI
+  # IMPORTANT: Add GITHUB_COPILOT_TOKEN as a pipeline variable/secret
+  # This should be a GitHub PAT from an account with Copilot access
+  - script: |
+      echo "Authenticating GitHub Copilot CLI..."
+      
+      # Install GitHub CLI if not available
+      type -p curl >/dev/null || sudo apt install curl -y
+      curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+      sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+      echo "deb [arch=$(dpkg --arch) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+      sudo apt update
+      sudo apt install gh -y
+      
+      # Authenticate using GitHub CLI
+      echo $(GITHUB_COPILOT_TOKEN) | gh auth login --with-token
+      gh auth setup-git
+      
+      # Verify Copilot is accessible
+      copilot --version
+    displayName: 'Authenticate GitHub Copilot CLI'
+    env:
+      GITHUB_COPILOT_TOKEN: $(GITHUB_COPILOT_TOKEN)
+
+  # Install dependencies and build the tool
+  - script: |
+      echo "Installing dependencies and building..."
+      npm ci
+      npm run build
+    displayName: 'Build PR Reviewer Tool'
+
+  # Run the AI code review
+  - script: |
+      echo "Running AI-powered code review..."
+      
+      node dist/index.js review \
+        --platform azdo \
+        --org-url "$(System.CollectionUri)" \
+        --azdo-pat "$(System.AccessToken)" \
+        --project "$(System.TeamProject)" \
+        --repository "$(Build.Repository.Name)" \
+        --pr-id "$(System.PullRequest.PullRequestId)" \
+        --post-comment \
+        --output "$(Build.ArtifactStagingDirectory)/review-report.md"
+      
+      REVIEW_EXIT_CODE=$?
+      
+      echo "Review completed with exit code: $REVIEW_EXIT_CODE"
+      
+      # Don't fail the build for warnings, only for errors
+      if [ $REVIEW_EXIT_CODE -eq 1 ]; then
+        echo "##vso[task.logissue type=error]Code review found critical issues"
+        exit 1
+      fi
+      
+      exit 0
+    displayName: 'Run AI Code Review'
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    env:
+      REVIEW_CONFIG_PATH: '$(Build.SourcesDirectory)/review-config.json'
+
+  # Publish the review report as a build artifact
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)/review-report.md'
+      ArtifactName: 'code-review-report'
+      publishLocation: 'Container'
+    displayName: 'Publish Review Report'
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))

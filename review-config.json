@@ -1,0 +1,60 @@
+{
+  "checks": [
+    {
+      "name": "naming-conventions",
+      "description": "Verify that file and variable names follow naming conventions",
+      "enabled": true,
+      "severity": "warning",
+      "rule": "Check that:\n- TypeScript/JavaScript files use camelCase or kebab-case\n- Class names use PascalCase\n- Constants use UPPER_SNAKE_CASE\n- Functions and variables use camelCase\n- Interface names start with 'I' prefix or use PascalCase\n- Private members start with underscore or use # syntax"
+    },
+    {
+      "name": "deleted-code-blocks",
+      "description": "Detect large blocks of deleted code that might indicate important functionality removal",
+      "enabled": true,
+      "severity": "error",
+      "rule": "Identify deletions of:\n- More than 50 consecutive lines\n- Entire functions or classes\n- Critical business logic\n- Flag if deletion lacks corresponding additions or refactoring"
+    },
+    {
+      "name": "console-log-check",
+      "description": "Detect console.log statements that should not be committed",
+      "enabled": true,
+      "severity": "warning",
+      "rule": "Flag any new console.log, console.debug, or console.error statements added to the codebase unless they are in test files or specific logging utilities"
+    },
+    {
+      "name": "hardcoded-credentials",
+      "description": "Check for hardcoded credentials, API keys, or sensitive data",
+      "enabled": true,
+      "severity": "error",
+      "rule": "Detect patterns like:\n- API keys or tokens in plain text\n- Passwords or secrets\n- Database connection strings with credentials\n- Private keys or certificates"
+    },
+    {
+      "name": "missing-error-handling",
+      "description": "Ensure async operations have proper error handling",
+      "enabled": true,
+      "severity": "warning",
+      "rule": "Check that:\n- Async functions have try-catch blocks or .catch() handlers\n- Promise chains include error handling\n- Database operations handle failures gracefully"
+    },
+    {
+      "name": "todo-comments",
+      "description": "Flag TODO comments that might need attention before merge",
+      "enabled": true,
+      "severity": "info",
+      "rule": "Identify TODO, FIXME, HACK, or XXX comments and report them for review"
+    },
+    {
+      "name": "code-duplication",
+      "description": "Identify potential code duplication",
+      "enabled": true,
+      "severity": "info",
+      "rule": "Look for similar code blocks that could be refactored into shared functions or utilities"
+    },
+    {
+      "name": "missing-tests",
+      "description": "Check if new features include corresponding test files",
+      "enabled": true,
+      "severity": "warning",
+      "rule": "If new source files are added (not in test directories), verify that corresponding test files exist or are being added in this PR"
+    }
+  ]
+}
