@@ -12,9 +12,6 @@ export class CopilotReviewEngine {
   constructor(cliPath?: string) {
     console.log("Initializing Copilot client...");
     
-    // Polyfill Web APIs that the Copilot CLI expects but aren't in Node.js
-    this.setupWebAPIPolyfills();
-    
     // Ensure required directories exist for Copilot CLI
     this.ensureCopilotDirectories();
     
@@ -34,8 +31,11 @@ export class CopilotReviewEngine {
     console.log("Working Directory:", workDir);
     
     // Set environment variables for headless CI operation
+    const polyfillPath = path.resolve(__dirname, '../../copilot-polyfills.js');
     const env = {
       ...process.env,
+      // Inject polyfills into the CLI subprocess
+      NODE_OPTIONS: `--require ${polyfillPath} ${process.env.NODE_OPTIONS || ''}`.trim(),
       // Suppress CLI warnings and errors from stderr
       NODE_NO_WARNINGS: '1',
       // CI environment flag
@@ -63,24 +63,6 @@ export class CopilotReviewEngine {
     } catch (error) {
       console.warn("Warning: Could not create Copilot directories:", error);
       // Don't fail - let Copilot CLI handle it
-    }
-  }
-
-  private setupWebAPIPolyfills(): void {
-    // The Copilot CLI npm package expects Web APIs that don't exist in Node.js
-    // Provide minimal polyfills to prevent crashes
-    if (typeof globalThis.File === 'undefined') {
-      // @ts-ignore - Polyfill for missing Web API
-      globalThis.File = class File {
-        constructor(public chunks: any[], public name: string, public options: any = {}) {}
-      };
-    }
-    
-    if (typeof globalThis.Blob === 'undefined') {
-      // @ts-ignore - Polyfill for missing Web API  
-      globalThis.Blob = class Blob {
-        constructor(public chunks: any[] = [], public options: any = {}) {}
-      };
     }
   }
 
