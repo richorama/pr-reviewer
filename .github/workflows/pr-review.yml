@@ -69,55 +69,14 @@ jobs:
           gh extension install github/gh-copilot 2>/dev/null || true
           gh copilot --version || echo "gh copilot not available"
 
-      - name: Try Copilot CLI auth
+      - name: Debug environment
         run: |
           echo "=== Check gh CLI auth ==="
           gh auth status
-          
           echo ""
-          echo "=== Check what the copilot CLI sees ==="
-          # The copilot CLI is an AI chat tool, not a traditional CLI
-          # It should pick up auth from gh CLI or environment
-          
-          echo ""
-          echo "=== Testing SDK from project directory ==="
-          cd /home/runner/work/pr-reviewer/pr-reviewer
-          
-          cat > test-auth.mjs << 'EOF'
-import { CopilotClient } from "@github/copilot-sdk";
-
-const client = new CopilotClient({ logLevel: "info" });
-
-try {
-  console.log("Starting client...");
-  await client.start();
-  console.log("Client started successfully");
-  
-  console.log("Getting auth status...");
-  const status = await client.getAuthStatus();
-  console.log("Auth status:", JSON.stringify(status, null, 2));
-  
-  if (status.isAuthenticated) {
-    console.log("SUCCESS: Authenticated!");
-    console.log("Listing models...");
-    const models = await client.listModels();
-    console.log("Models:", models.map(m => m.id || m.name));
-  } else {
-    console.log("FAILED: Not authenticated");
-    console.log("Checking environment...");
-    console.log("GH_TOKEN set:", !!process.env.GH_TOKEN);
-    console.log("GITHUB_TOKEN set:", !!process.env.GITHUB_TOKEN);
-  }
-  
-  await client.stop();
-} catch (e) {
-  console.error("Error:", e.message);
-  console.error("Stack:", e.stack);
-  try { await client.stop(); } catch {}
-}
-EOF
-          
-          node test-auth.mjs
+          echo "=== Environment check ==="
+          echo "GH_TOKEN is set: $([ -n \"$GH_TOKEN\" ] && echo 'yes' || echo 'no')"
+          echo "GITHUB_TOKEN is set: $([ -n \"$GITHUB_TOKEN\" ] && echo 'yes' || echo 'no')"
         env:
           GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
