@@ -71,17 +71,57 @@ jobs:
 
       - name: Try Copilot CLI auth
         run: |
-          echo "Trying copilot CLI auth commands..."
-          copilot auth --help 2>/dev/null || echo "No auth subcommand"
-          copilot auth status 2>/dev/null || echo "No auth status"
-          copilot auth login --help 2>/dev/null || echo "No auth login"
+          echo "=== Copilot CLI help ==="
+          copilot --help 2>&1 || true
           
-          # Try with explicit token
-          echo "Testing with GH_TOKEN set..."
-          copilot --help 2>&1 | head -20 || true
+          echo ""
+          echo "=== Checking for auth subcommand ==="
+          copilot auth --help 2>&1 || echo "No auth subcommand available"
+          
+          echo ""
+          echo "=== Trying copilot auth login ==="
+          # The copilot CLI might support auth login
+          echo "${{ secrets.COPILOT_TOKEN }}" | copilot auth login 2>&1 || echo "copilot auth login failed or not available"
+          
+          echo ""
+          echo "=== Trying copilot auth status ==="
+          copilot auth status 2>&1 || echo "No auth status command"
+          
+          echo ""
+          echo "=== Testing SDK getAuthStatus with debug ==="
+          # Create a simple test script
+          cat > /tmp/test-auth.mjs << 'EOF'
+          import { CopilotClient } from "@github/copilot-sdk";
+          
+          const client = new CopilotClient({ logLevel: "info" });
+          
+          try {
+            console.log("Starting client...");
+            await client.start();
+            console.log("Client started");
+            
+            console.log("Getting auth status...");
+            const status = await client.getAuthStatus();
+            console.log("Auth status:", JSON.stringify(status, null, 2));
+            
+            if (status.isAuthenticated) {
+              console.log("Listing models...");
+              const models = await client.listModels();
+              console.log("Models:", models.map(m => m.id || m.name));
+            }
+            
+            await client.stop();
+          } catch (e) {
+            console.error("Error:", e.message);
+            await client.forceStop?.() || client.stop?.();
+          }
+          EOF
+          
+          node /tmp/test-auth.mjs
         env:
           GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          NODE_PATH: /home/runner/work/pr-reviewer/pr-reviewer/node_modules
 
       - name: Run AI Code Review
         run: |
