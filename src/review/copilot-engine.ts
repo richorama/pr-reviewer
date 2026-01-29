@@ -25,10 +25,31 @@ export class CopilotReviewEngine {
     const workDir = process.cwd();
     console.log("Working Directory:", workDir);
     
+    // Explicitly pass environment variables to ensure auth tokens are available
+    // The SDK should inherit process.env by default, but we make it explicit
+    const env: Record<string, string> = {};
+    for (const [key, value] of Object.entries(process.env)) {
+      if (value !== undefined) {
+        env[key] = value;
+      }
+    }
+    
+    // Ensure auth tokens are explicitly set
+    if (process.env.GH_TOKEN) {
+      env.GH_TOKEN = process.env.GH_TOKEN;
+      env.GITHUB_TOKEN = process.env.GH_TOKEN;
+    } else if (process.env.GITHUB_TOKEN) {
+      env.GH_TOKEN = process.env.GITHUB_TOKEN;
+      env.GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+    }
+    
+    console.log("Passing explicit env to CLI, GH_TOKEN set:", !!env.GH_TOKEN);
+    
     this.client = new CopilotClient({
       cliPath: resolvedCliPath,
       cwd: workDir,
-      logLevel: "error", // Use "error" to reduce noise, "info" for debugging
+      env: env,
+      logLevel: "info", // Use "info" for debugging
     });
   }
 
