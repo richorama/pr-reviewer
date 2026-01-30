@@ -13,9 +13,7 @@ An AI-powered CLI tool that uses **GitHub Copilot SDK** to perform intelligent c
 ## Prerequisites
 
 1. **Node.js** >= 18.0.0
-2. **GitHub Copilot CLI** installed and configured
-   - Install: Follow the [GitHub Copilot CLI installation guide](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli)
-   - Ensure `copilot` is available in your PATH
+2. **GitHub Copilot subscription** - The tool requires access to GitHub Copilot's AI service
 3. **Platform-specific access token**:
    - **GitHub**: Personal Access Token with `repo` scope
    - **Azure DevOps**: Personal Access Token with Code (Read) and Pull Request Threads (Read & Write)
@@ -181,10 +179,31 @@ The `GITHUB_TOKEN` provided by Actions/Pipelines **cannot** authenticate with Co
 
 ### GitHub Actions
 
+**Required Secrets:**
+- `COPILOT_TOKEN` - ⚠️ **YOU MUST CREATE** - Personal Access Token from a Copilot-enabled account
+- `GITHUB_TOKEN` - ✅ **AUTOMATIC** - Provided by GitHub Actions (no setup needed)
+
 **Setup Steps:**
-1. Get a PAT from a GitHub account with Copilot access
-2. Add it as a repository secret named `GITHUB_COPILOT_TOKEN`
-3. Use the workflow below:
+1. **Create a Personal Access Token:**
+   - Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+   - Click "Generate new token (classic)"
+   - Note: "Copilot CI/CD Token"
+   - Expiration: Choose your preference
+   - **Required Scopes:** Check `copilot` scope (for Copilot API access)
+   - Copy the token
+
+2. **Add the secret to your repository:**
+   - Go to your repository → Settings → Secrets and variables → Actions
+   - Click "New repository secret"
+   - Name: `COPILOT_TOKEN`
+   - Value: Paste your PAT
+   - Click "Add secret"
+
+3. The workflow is already in place at `.github/workflows/pr-review.yml`
+
+**What each secret does:**
+- `COPILOT_TOKEN` - Authenticates with GitHub Copilot's AI service to run code analysis
+- `GITHUB_TOKEN` - Accesses the PR (read files, post comments) - automatically provided with correct permissions
 
 Create `.github/workflows/pr-review.yml`:
 
@@ -211,14 +230,11 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install GitHub Copilot CLI
-        run: npm install -g @github/copilot-cli
-
-      - name: Authenticate Copilot CLI
+      - name: Install GitHub CLI and Copilot extension
+        run: |\n          gh extension install github/gh-copilot || true\n          gh copilot --version\n\n      - name: Authenticate GitHub CLI for Copilot
         run: |
           echo ${{ secrets.GITHUB_COPILOT_TOKEN }} | gh auth login --with-token
-          gh auth setup-git
-          copilot --version
+          gh auth status
         env:
           GH_TOKEN: ${{ secrets.GITHUB_COPILOT_TOKEN }}
 
@@ -253,7 +269,7 @@ jobs:
 **Setup Steps:**
 1. Get a GitHub PAT from an account with Copilot access (Settings → Developer settings → Personal access tokens)
 2. In Azure DevOps, go to Pipelines → Library → Variable groups (or add directly to pipeline)
-3. Add a variable named `GITHUB_COPILOT_TOKEN` with your PAT value (check "Keep this value secret")
+3. Add a variable named `COPILOT_TOKEN` with your PAT value (check "Keep this value secret")
 4. Use the pipeline below:
 
 See [azure-pipelines.yml](./azure-pipelines.yml) for the complete pipeline configuration.
@@ -373,34 +389,58 @@ The `rule` field should contain clear, specific instructions for the AI to follo
 
 ## Troubleshooting
 
-### "Copilot CLI not found"
+### "Cannot call write after a stream was destroyed" or similar Copilot SDK errors
 
-Make sure the Copilot CLI is installed and in your PATH:
+The Copilot SDK needs to communicate with the GitHub Copilot CLI. Make sure:
 
+1. **Dependencies are installed**: Run `npm install` to ensure `@github/copilot` is installed
+2. **Copilot authentication**: Set `GH_TOKEN` or `GITHUB_TOKEN` environment variable with a PAT that has Copilot access
+3. **You have Copilot access**: The authenticated GitHub account must have an active Copilot subscription
+
+If running locally:
 ```bash
-copilot --version
+# Install dependencies
+npm install
+
+# Set your Copilot token
+export GITHUB_TOKEN=your_token_here
+
+# Run the tool
+npm run build
+node dist/index.js review ...
 ```
 
-If not installed, follow the [installation guide](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli).
+### "GitHub Copilot CLI not found"
+
+This means the `@github/copilot` package is not installed:
+
+```bash
+# Install dependencies
+npm install
+
+# Verify the package is installed
+ls node_modules/@github/copilot
+```
 
 ### "Not authenticated with Copilot" in CI/CD
 
-This is the most common issue. The Copilot CLI needs authentication separate from the pipeline's default tokens.
+This is the most common issue. The Copilot CLI needs authentication to access the Copilot API.
 
 **Solution:**
 1. Create a GitHub Personal Access Token from an account that has Copilot access
+   - **Required scopes:** `copilot` (for Copilot API access)
 2. Add it as a secret to your CI/CD platform:
-   - **GitHub Actions**: Add as `GITHUB_COPILOT_TOKEN` in repository secrets
-   - **Azure Pipelines**: Add as `GITHUB_COPILOT_TOKEN` in pipeline variables (mark as secret)
-3. The workflow will use this to authenticate via `gh auth login`
+   - **GitHub Actions**: Add as `COPILOT_TOKEN` in repository secrets (Settings → Secrets and variables → Actions → New repository secret)
+   - **Azure Pipelines**: Add as `COPILOT_TOKEN` in pipeline variables (mark as secret)
+3. The CLI will use the `GH_TOKEN` or `GITHUB_TOKEN` environment variable for authentication
 
-**Why is this needed?**
-- GitHub Actions' `GITHUB_TOKEN` doesn't include Copilot API access
-- Azure Pipelines' `System.AccessToken` is for Azure DevOps, not GitHub Copilot
-- The Copilot CLI needs to authenticate with a GitHub account that has an active Copilot subscription
+**Why do I need TWO tokens in GitHub Actions?**
+- `GITHUB_TOKEN` (automatic) - For accessing the PR (reading code, posting comments)
+- `COPILOT_TOKEN` (manual) - For accessing GitHub Copilot's AI service
+- They serve different purposes and `GITHUB_TOKEN` doesn't include Copilot API access
 
 **For GitHub:**
-- Ensure your GitHub token has the `repo` scope
+- Ensure your Personal Access Token has the `copilot` scope
 
 **For Azure DevOps:**
 - Ensure your PAT has Code (Read) and Pull Request Threads (Read & Write) permissionsess Token has the correct permissions:
@@ -422,9 +462,9 @@ This can happen if:
 | **PR Metadata** | ✅ `GITHUB_TOKEN` (auto) | ✅ `System.AccessToken` (auto) |
 | **PR Files/Diffs** | ✅ `GITHUB_TOKEN` (auto) | ✅ `System.AccessToken` (auto) |
 | **Post Comments** | ✅ `GITHUB_TOKEN` (auto) | ✅ `System.AccessToken` (auto) |
-| **Copilot CLI Auth** | ❌ Need `COPILOT_GITHUB_TOKEN` (manual) | ❌ Need `GITHUB_COPILOT_TOKEN` (manual) |
+| **Copilot CLI Auth** | ⚠️ `COPILOT_TOKEN` (manual) | ⚠️ `COPILOT_TOKEN` (manual) |
 
-**Yes, it can access everything needed** - with one caveat: you must provide a Copilot-enabled GitHub PAT for the AI analysis. The PR data itself is accessible via the platform's built-in tokens.
+**Summary:** Only ONE secret needs manual setup (`COPILOT_TOKEN`). The platform's default tokens handle PR access automatically.
 
 ## Contributing
 

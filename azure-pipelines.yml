@@ -24,35 +24,14 @@ steps:
       versionSpec: $(NODE_VERSION)
     displayName: 'Install Node.js $(NODE_VERSION)'
 
-  # Install GitHub Copilot CLI
+  # Setup Copilot Authentication
   - script: |
-      echo "Installing GitHub Copilot CLI..."
-      npm install -g @github/copilot-cli
-    displayName: 'Install GitHub Copilot CLI'
-
-  # Authenticate GitHub Copilot CLI
-  # IMPORTANT: Add GITHUB_COPILOT_TOKEN as a pipeline variable/secret
-  # This should be a GitHub PAT from an account with Copilot access
-  - script: |
-      echo "Authenticating GitHub Copilot CLI..."
-      
-      # Install GitHub CLI if not available
-      type -p curl >/dev/null || sudo apt install curl -y
-      curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-      sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-      echo "deb [arch=$(dpkg --arch) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-      sudo apt update
-      sudo apt install gh -y
-      
-      # Authenticate using GitHub CLI
-      echo $(GITHUB_COPILOT_TOKEN) | gh auth login --with-token
-      gh auth setup-git
-      
-      # Verify Copilot is accessible
-      copilot --version
-    displayName: 'Authenticate GitHub Copilot CLI'
+      echo "Setting up Copilot authentication..."
+      echo "✅ COPILOT_TOKEN environment variable configured"
+    displayName: 'Setup Copilot Authentication'
     env:
-      GITHUB_COPILOT_TOKEN: $(GITHUB_COPILOT_TOKEN)
+      GH_TOKEN: $(COPILOT_TOKEN)
+      GITHUB_TOKEN: $(COPILOT_TOKEN)
 
   # Install dependencies and build the tool
   - script: |
@@ -89,6 +68,8 @@ steps:
     displayName: 'Run AI Code Review'
     condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
     env:
+      GH_TOKEN: $(COPILOT_TOKEN)
+      GITHUB_TOKEN: $(COPILOT_TOKEN)
       REVIEW_CONFIG_PATH: '$(Build.SourcesDirectory)/review-config.json'
 
   # Publish the review report as a build artifact

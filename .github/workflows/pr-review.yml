@@ -20,28 +20,33 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install GitHub Copilot CLI
-        run: |
-          npm install -g @github/copilot-cli
-          
-      # IMPORTANT: Authenticate Copilot CLI
+      # IMPORTANT: Set Copilot authentication
       # You need a GitHub account with Copilot access
-      # Add GITHUB_COPILOT_TOKEN as a repository secret with a PAT that has Copilot access
-      - name: Authenticate Copilot CLI
+      # Add COPILOT_TOKEN as a repository secret with a PAT that has Copilot access
+      - name: Setup Copilot Authentication
         run: |
-          # Method 1: Use gh CLI (recommended)
-          echo ${{ secrets.GITHUB_COPILOT_TOKEN }} | gh auth login --with-token
-          gh auth setup-git
+          if [ -z "${{ secrets.COPILOT_TOKEN }}" ]; then
+            echo "❌ ERROR: COPILOT_TOKEN secret is not set!"
+            echo ""
+            echo "To fix this:"
+            echo "1. Go to Settings → Secrets and variables → Actions"
+            echo "2. Click 'New repository secret'"
+            echo "3. Name: COPILOT_TOKEN"
+            echo "4. Value: A Personal Access Token with 'copilot' scope"
+            echo ""
+            echo "See README.md for detailed instructions."
+            exit 1
+          fi
           
-          # Verify Copilot authentication
-          copilot --version
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_COPILOT_TOKEN }}
+          echo "✅ COPILOT_TOKEN is configured"
 
       - name: Install dependencies and build
         run: |
           npm ci
           npm run build
+
+      # Note: Using REST API mode which doesn't require the Copilot CLI
+      # The COPILOT_TOKEN needs 'copilot' scope for API access
 
       - name: Run AI Code Review
         run: |
@@ -51,10 +56,12 @@ jobs:
             --owner ${{ github.repository_owner }} \
             --repository ${{ github.event.repository.name }} \
             --pr-id ${{ github.event.pull_request.number }} \
+            --use-api \
             --post-comment \
             --output review-report.md
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COPILOT_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
 
       - name: Upload Review Report
         uses: actions/upload-artifact@v4

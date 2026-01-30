@@ -1,29 +1,138 @@
 import { CopilotClient, CopilotSession } from "@github/copilot-sdk";
 import { ReviewCheckConfig, FileChange, ReviewResult } from "../types/index.js";
+import path from "path";
+import fs from "fs";
+import os from "os";
 
 export class CopilotReviewEngine {
   private client: CopilotClient;
   private session: CopilotSession | null = null;
 
   constructor(cliPath?: string) {
+    console.log("Initializing Copilot client...");
+    
+    // Ensure required directories exist for Copilot CLI
+    this.ensureCopilotDirectories();
+    
+    // Use the copilot CLI from PATH (installed globally) or custom path
+    const resolvedCliPath = cliPath || 
+      process.env.COPILOT_CLI_PATH || 
+      'copilot'; // Default: look in PATH
+    
+    console.log("CLI Path:", resolvedCliPath);
+    
+    // Set working directory for Copilot CLI to avoid path issues
+    const workDir = process.cwd();
+    console.log("Working Directory:", workDir);
+    
+    // Explicitly pass environment variables to ensure auth tokens are available
+    // The SDK should inherit process.env by default, but we make it explicit
+    const env: Record<string, string> = {};
+    for (const [key, value] of Object.entries(process.env)) {
+      if (value !== undefined) {
+        env[key] = value;
+      }
+    }
+    
+    // Ensure auth tokens are explicitly set
+    if (process.env.GH_TOKEN) {
+      env.GH_TOKEN = process.env.GH_TOKEN;
+      env.GITHUB_TOKEN = process.env.GH_TOKEN;
+    } else if (process.env.GITHUB_TOKEN) {
+      env.GH_TOKEN = process.env.GITHUB_TOKEN;
+      env.GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+    }
+    
+    console.log("Passing explicit env to CLI, GH_TOKEN set:", !!env.GH_TOKEN);
+    
     this.client = new CopilotClient({
-      cliPath: cliPath || "copilot",
-      logLevel: "error",
+      cliPath: resolvedCliPath,
+      cwd: workDir,
+      env: env,
+      logLevel: "info", // Use "info" for debugging
     });
   }
 
+  private ensureCopilotDirectories(): void {
+    try {
+      // Ensure ~/.copilot directory exists
+      const homeDir = os.homedir();
+      const copilotDir = path.join(homeDir, '.copilot');
+      
+      if (!fs.existsSync(copilotDir)) {
+        console.log(`Creating Copilot config directory: ${copilotDir}`);
+        fs.mkdirSync(copilotDir, { recursive: true });
+      }
+    } catch (error) {
+      console.warn("Warning: Could not create Copilot directories:", error);
+      // Don't fail - let Copilot CLI handle it
+    }
+  }
+
   async initialize(): Promise<void> {
-    await this.client.start();
-    
-    this.session = await this.client.createSession({
-      model: "gpt-5",
-      systemMessage: {
-        content: `You are an expert code reviewer analyzing pull request changes. 
-Your job is to carefully review code changes and check them against specific business rules.
-Be thorough but fair. Provide clear, actionable feedback.
-Format your responses as structured JSON when requested.`,
-      },
-    });
+    try {
+      console.log("Starting Copilot client...");
+      
+      // Check authentication before starting
+      if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) {
+        throw new Error("No authentication token found. Set GH_TOKEN or GITHUB_TOKEN environment variable.");
+      }
+      
+      console.log("Authentication token is set:", process.env.GH_TOKEN ? "GH_TOKEN" : "GITHUB_TOKEN");
+      
+      // Add timeout to prevent hanging
+      const startPromise = this.client.start();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Copilot client start timed out after 30 seconds")), 30000)
+      );
+      
+      await Promise.race([startPromise, timeoutPromise]);
+      
+      console.log("Copilot client started successfully");
+      
+      // Check authentication status
+      console.log("Checking authentication status...");
+      const authStatus = await this.client.getAuthStatus();
+      console.log("Auth status:", JSON.stringify(authStatus, null, 2));
+      
+      if (!authStatus.isAuthenticated) {
+        throw new Error(`Not authenticated with Copilot. Status: ${authStatus.statusMessage || 'Unknown'}`);
+      }
+      
+      console.log(`Authenticated as: ${authStatus.login} (${authStatus.authType})`);
+      
+      // List available models
+      console.log("Listing available models...");
+      try {
+        const models = await this.client.listModels();
+        console.log("Available models:", models.map(m => m.id || m.name).join(", "));
+      } catch (modelError) {
+        console.log("Could not list models:", modelError instanceof Error ? modelError.message : modelError);
+      }
+      
+      console.log("Creating Copilot session...");
+      // Don't specify a model - let Copilot use the default
+      this.session = await this.client.createSession({
+        systemMessage: {
+          content: `You are an expert code reviewer. Respond with JSON only.`,
+        },
+      });
+      
+      // Add event listener to see what's happening
+      this.session.on((event) => {
+        const eventData = event.type === 'assistant.message' 
+          ? (event.data as any)?.content?.substring(0, 100) + '...'
+          : event.type === 'session.error' 
+            ? JSON.stringify(event.data)
+            : '';
+        console.log(`  [Event] ${event.type}`, eventData ? `: ${eventData}` : '');
+      });
+      
+      console.log("Copilot session created successfully");
+    } catch (error) {
+      console.error("Failed to initialize Copilot:", error);
+      throw error;
+    }
   }
 
   async reviewChanges(
@@ -67,74 +176,65 @@ Format your responses as structured JSON when requested.`,
       throw new Error("Session not available");
     }
 
-    // Prepare file changes summary
+    // Prepare a concise file changes summary (limit to avoid huge prompts)
     const changesContext = fileChanges
-      .map((fc) => {
-        const lines = fc.content ? `(${fc.content.split("\n").length} lines)` : "";
-        return `- ${fc.changeType.toUpperCase()}: ${fc.path} ${lines}`;
-      })
+      .slice(0, 5) // Limit to first 5 files
+      .map((fc) => `- ${fc.changeType.toUpperCase()}: ${fc.path}`)
       .join("\n");
 
-    // Prepare detailed content for analysis
-    const detailedContent = fileChanges
-      .filter((fc) => fc.content) // Only include files with content
-      .slice(0, 10) // Limit to first 10 files to avoid token limits
+    // Prepare a very limited content sample to keep prompt small
+    const contentSample = fileChanges
+      .filter((fc) => fc.content)
+      .slice(0, 3) // Only first 3 files
       .map((fc) => {
-        return `
-=== File: ${fc.path} (${fc.changeType}) ===
-${fc.content}
-`;
+        // Limit content to first 50 lines
+        const lines = fc.content?.split("\\n").slice(0, 50).join("\\n") || "";
+        return `=== ${fc.path} ===\\n${lines}`;
       })
-      .join("\n");
+      .join("\\n\\n");
 
-    const prompt = `
-You are reviewing a pull request. Analyze the following code changes against this specific rule:
+    // Keep prompt concise
+    const prompt = `Review these code changes for: ${check.name}
 
-**Check Name:** ${check.name}
-**Description:** ${check.description}
-**Severity:** ${check.severity}
+Rule: ${check.description}
 
-**Rule to Apply:**
-${check.rule}
-
-**Files Changed:**
+Files changed:
 ${changesContext}
 
-**Detailed File Contents (sample):**
-${detailedContent || "No file contents available"}
+Sample content:
+${contentSample.substring(0, 2000)}
 
-Analyze the changes and return a JSON array of findings. Each finding should have:
-{
-  "passed": boolean (true if no issues found for this aspect),
-  "message": "Brief description of the finding",
-  "details": "Detailed explanation (optional)",
-  "file": "File path where issue was found (optional)",
-  "line": line number if applicable (optional)
-}
+Return JSON array: [{"passed": true/false, "message": "finding"}]
+If no issues: [{"passed": true, "message": "Check passed"}]
+JSON only:`;
 
-If the check passes completely with no issues, return: [{"passed": true, "message": "Check passed"}]
-If there are issues, return one object per issue found.
-
-Return ONLY the JSON array, no other text.
-`;
-
-    const response = await this.session.sendAndWait({
-      prompt,
-      mode: "immediate",
-    });
-
-    if (!response || !response.data.content) {
-      return [{
-        checkName: check.name,
-        passed: false,
-        severity: check.severity,
-        message: "No response from Copilot",
-      }];
-    }
-
+    console.log(`  Sending prompt (${prompt.length} chars)...`);
+    console.log(`  Waiting for response (timeout: 60s)...`);
+    
+    const startTime = Date.now();
+    
     try {
+      const response = await this.session.sendAndWait({
+        prompt,
+      });
+      
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`  Response received in ${duration}s`);
+
+      if (!response || !response.data.content) {
+        console.log(`  Warning: Empty response from Copilot`);
+        return [{
+          checkName: check.name,
+          passed: false,
+          severity: check.severity,
+          message: "No response from Copilot",
+        }];
+      }
+
       // Extract JSON from response
       const content = response.data.content.trim();
+      console.log(`  Response content (first 200 chars): ${content.substring(0, 200)}`);
+      
       let jsonStr = content;
       
       // Try to extract JSON if it's wrapped in markdown code blocks
@@ -159,16 +259,15 @@ Return ONLY the JSON array, no other text.
         line: finding.line,
       }));
     } catch (error) {
-      console.error(`Failed to parse Copilot response for ${check.name}:`, error);
-      console.error("Response was:", response.data.content);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.error(`  Failed after ${duration}s:`, error instanceof Error ? error.message : error);
       
-      // Fallback: interpret response as text
+      // Fallback: return error result
       return [{
         checkName: check.name,
         passed: false,
         severity: check.severity,
-        message: "Could not parse review results",
-        details: response.data.content,
+        message: `Check failed: ${error instanceof Error ? error.message : String(error)}`,
       }];
     }
   }

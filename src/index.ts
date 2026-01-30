@@ -7,6 +7,7 @@ import * as path from "path";
 import { AzureDevOpsClient } from "./azure-devops/client.js";
 import { GitHubClient } from "./github/client.js";
 import { CopilotReviewEngine } from "./review/copilot-engine.js";
+import { CopilotAPIEngine } from "./review/copilot-api-engine.js";
 import { ReviewReporter } from "./review/reporter.js";
 import { ReviewConfig, ReviewReport, PullRequestInfo, FileChange } from "./types/index.js";
 
@@ -38,6 +39,8 @@ program
   .option("--post-comment", "Post review results as a PR comment", false)
   .option("--output <path>", "Save report to a file")
   .option("--copilot-cli <path>", "Path to Copilot CLI executable", process.env.COPILOT_CLI_PATH)
+  .option("--use-api", "Use Copilot REST API instead of CLI (recommended for CI/CD)", true)
+  .option("--use-cli", "Use Copilot CLI instead of REST API (requires interactive auth)")
   .action(async (options) => {
     try {
       console.log(`🚀 Starting ${options.platform.toUpperCase()} PR Review...\n`);
@@ -135,8 +138,15 @@ program
       }
 
       // Initialize Copilot review engine
+      // Use REST API by default (works in CI/CD), CLI requires interactive OAuth
+      const useAPI = options.useApi && !options.useCli;
+      
       console.log("🤖 Initializing GitHub Copilot...");
-      const reviewEngine = new CopilotReviewEngine(options.copilotCli);
+      console.log(`   Mode: ${useAPI ? 'REST API (CI/CD compatible)' : 'CLI (requires OAuth)'}`);
+      
+      const reviewEngine = useAPI 
+        ? new CopilotAPIEngine()
+        : new CopilotReviewEngine(options.copilotCli);
       await reviewEngine.initialize();
       console.log("   ✅ Copilot ready\n");
 
