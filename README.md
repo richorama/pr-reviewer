@@ -43,17 +43,17 @@ Create a `.env` file in your project root or set environment variables:
 PLATFORM=github
 
 # GitHub Configuration
-GITHUB_TOKEN=<your-github-token>
-GITHUB_OWNER=your-username-or-org
+GITHUB_TOKEN=           # Your GitHub PAT
+GITHUB_OWNER=           # Your username or org
 
 # Azure DevOps Configuration
-AZDO_ORG_URL=https://dev.azure.com/your-organization
-AZDO_PAT=<your-azure-devops-pat>
-AZDO_PROJECT=YourProject
+AZDO_ORG_URL=           # https://dev.azure.com/your-organization
+AZDO_PAT=               # Your Azure DevOps PAT
+AZDO_PROJECT=           # Your project name
 
 # Common Configuration
-REPOSITORY=YourRepo
-PR_ID=123
+REPOSITORY=             # Repository name
+PR_ID=                  # Pull request number
 
 # Optional: Custom Copilot CLI path
 # COPILOT_CLI_PATH=/custom/path/to/copilot
