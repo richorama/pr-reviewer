@@ -51,6 +51,7 @@ steps:
         --project "$(System.TeamProject)" \
         --repository "$(Build.Repository.Name)" \
         --pr-id "$(System.PullRequest.PullRequestId)" \
+        --use-api \
         --post-comment \
         --output "$(Build.ArtifactStagingDirectory)/review-report.md"
       
@@ -68,8 +69,8 @@ steps:
     displayName: 'Run AI Code Review'
     condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
     env:
+      COPILOT_TOKEN: $(COPILOT_TOKEN)
       GH_TOKEN: $(COPILOT_TOKEN)
-      GITHUB_TOKEN: $(COPILOT_TOKEN)
       REVIEW_CONFIG_PATH: '$(Build.SourcesDirectory)/review-config.json'
 
   # Publish the review report as a build artifact
