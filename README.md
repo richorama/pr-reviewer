@@ -1,5 +1,7 @@
 # AI-Powered PR Reviewer
 
+> 🚀 Automate your code reviews with AI-powered analysis
+
 An AI-powered CLI tool that uses **GitHub Copilot SDK** to perform intelligent code reviews on **GitHub** and **Azure DevOps** pull requests. This tool applies customizable business-specific rules to check for naming conventions, deleted code blocks, security issues, and more.
 
 ## Features
@@ -41,17 +43,17 @@ Create a `.env` file in your project root or set environment variables:
 PLATFORM=github
 
 # GitHub Configuration
-GITHUB_TOKEN=ghp_your_github_token
-GITHUB_OWNER=your-username-or-org
+GITHUB_TOKEN=           # Your GitHub PAT
+GITHUB_OWNER=           # Your username or org
 
 # Azure DevOps Configuration
-AZDO_ORG_URL=https://dev.azure.com/your-organization
-AZDO_PAT=your-personal-access-token
-AZDO_PROJECT=YourProject
+AZDO_ORG_URL=           # https://dev.azure.com/your-organization
+AZDO_PAT=               # Your Azure DevOps PAT
+AZDO_PROJECT=           # Your project name
 
 # Common Configuration
-REPOSITORY=YourRepo
-PR_ID=123
+REPOSITORY=             # Repository name
+PR_ID=                  # Pull request number
 
 # Optional: Custom Copilot CLI path
 # COPILOT_CLI_PATH=/custom/path/to/copilot
@@ -270,7 +272,12 @@ jobs:
 1. Get a GitHub PAT from an account with Copilot access (Settings → Developer settings → Personal access tokens)
 2. In Azure DevOps, go to Pipelines → Library → Variable groups (or add directly to pipeline)
 3. Add a variable named `COPILOT_TOKEN` with your PAT value (check "Keep this value secret")
-4. Use the pipeline below:
+4. **Grant Build Service permissions:**
+   - Go to **Project Settings** → **Repositories** → Select your repo
+   - Click the **Security** tab
+   - Find **[Project Name] Build Service** (or **Project Collection Build Service**)
+   - Set **Contribute to pull requests** to **Allow**
+5. Use the pipeline below:
 
 See [azure-pipelines.yml](./azure-pipelines.yml) for the complete pipeline configuration.
 
@@ -486,7 +493,5 @@ BuiOctokit (GitHub REST API)](https://github.com/octokit/rest.js)
 - [Commander.js](https://github.com/tj/commander.js)
 
 ---
-
-**Note**: This tool requires a GitHub Copilot subscrip
 
 **Note**: This tool requires a GitHub Copilot subscription and an active Azure DevOps organization.
