@@ -45,50 +45,8 @@ jobs:
           npm ci
           npm run build
 
-      - name: Install Copilot CLI globally
-        run: |
-          npm install -g @github/copilot
-          echo "Verifying copilot CLI installation..."
-          which copilot || echo "copilot not in PATH"
-          copilot --version || echo "copilot --version failed"
-          
-          echo ""
-          echo "Available copilot commands:"
-          copilot --help || true
-
-      - name: Authenticate with GitHub CLI
-        run: |
-          echo "Authenticating gh CLI with the Copilot token..."
-          # Unset GH_TOKEN temporarily so gh auth login can store credentials
-          unset GH_TOKEN
-          echo "${{ secrets.COPILOT_TOKEN }}" | gh auth login --with-token
-          gh auth status
-          
-          echo ""
-          echo "Checking Copilot extension..."
-          gh extension install github/gh-copilot 2>/dev/null || true
-          gh copilot --version || echo "gh copilot not available"
-
-      - name: Debug environment
-        run: |
-          echo "=== Check gh CLI auth ==="
-          gh auth status
-          echo ""
-          echo "=== gh auth token ==="
-          # This shows what scopes the token has
-          gh auth token 2>&1 || echo "Cannot get token"
-          echo ""
-          echo "=== Testing copilot with GH_TOKEN ==="
-          # Start copilot in background to test auth
-          timeout 5 copilot --server --port 9999 2>&1 || echo "Server exited/timed out"
-          echo ""
-          echo "=== Environment check ==="
-          echo "GH_TOKEN is set: $([ -n \"$GH_TOKEN\" ] && echo 'yes' || echo 'no')"
-          echo "GITHUB_TOKEN is set: $([ -n \"$GITHUB_TOKEN\" ] && echo 'yes' || echo 'no')"
-          echo "GH_TOKEN first 10 chars: ${GH_TOKEN:0:10}..."
-        env:
-          GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+      # Note: Using REST API mode which doesn't require the Copilot CLI
+      # The COPILOT_TOKEN needs 'copilot' scope for API access
 
       - name: Run AI Code Review
         run: |
@@ -98,11 +56,12 @@ jobs:
             --owner ${{ github.repository_owner }} \
             --repository ${{ github.event.repository.name }} \
             --pr-id ${{ github.event.pull_request.number }} \
+            --use-api \
             --post-comment \
             --output review-report.md
         env:
+          COPILOT_TOKEN: ${{ secrets.COPILOT_TOKEN }}
           GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
 
       - name: Upload Review Report
         uses: actions/upload-artifact@v4
