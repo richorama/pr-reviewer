@@ -489,6 +489,4 @@ BuiOctokit (GitHub REST API)](https://github.com/octokit/rest.js)
 
 ---
 
-**Note**: This tool requires a GitHub Copilot subscrip
-
 **Note**: This tool requires a GitHub Copilot subscription and an active Azure DevOps organization.
