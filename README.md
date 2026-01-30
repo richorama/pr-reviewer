@@ -272,7 +272,12 @@ jobs:
 1. Get a GitHub PAT from an account with Copilot access (Settings → Developer settings → Personal access tokens)
 2. In Azure DevOps, go to Pipelines → Library → Variable groups (or add directly to pipeline)
 3. Add a variable named `COPILOT_TOKEN` with your PAT value (check "Keep this value secret")
-4. Use the pipeline below:
+4. **Grant Build Service permissions:**
+   - Go to **Project Settings** → **Repositories** → Select your repo
+   - Click the **Security** tab
+   - Find **[Project Name] Build Service** (or **Project Collection Build Service**)
+   - Set **Contribute to pull requests** to **Allow**
+5. Use the pipeline below:
 
 See [azure-pipelines.yml](./azure-pipelines.yml) for the complete pipeline configuration.
 
