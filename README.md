@@ -1,5 +1,7 @@
 # AI-Powered PR Reviewer
 
+> 🚀 Automate your code reviews with AI-powered analysis
+
 An AI-powered CLI tool that uses **GitHub Copilot SDK** to perform intelligent code reviews on **GitHub** and **Azure DevOps** pull requests. This tool applies customizable business-specific rules to check for naming conventions, deleted code blocks, security issues, and more.
 
 ## Features
