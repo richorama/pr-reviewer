@@ -34,32 +34,7 @@ npm run build
 
 ## Configuration
 
-### 1. Environment Variables
-
-Create a `.env` file in your project root or set environment variables:
-
-```bash
-# Platform Selection (github or azdo)
-PLATFORM=github
-
-# GitHub Configuration
-GITHUB_TOKEN=           # Your GitHub PAT
-GITHUB_OWNER=           # Your username or org
-
-# Azure DevOps Configuration
-AZDO_ORG_URL=           # https://dev.azure.com/your-organization
-AZDO_PAT=               # Your Azure DevOps PAT
-AZDO_PROJECT=           # Your project name
-
-# Common Configuration
-REPOSITORY=             # Repository name
-PR_ID=                  # Pull request number
-
-# Optional: Custom Copilot CLI path
-# COPILOT_CLI_PATH=/custom/path/to/copilot
-```
-
-### 2. Review Configuration
+### 1. Review Configuration
 
 Create a `review-config.json` file to define your custom checks. See [review-config.json](./review-config.json) for a complete example.
 
