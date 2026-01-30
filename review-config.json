@@ -26,7 +26,7 @@
       "description": "Check for hardcoded credentials, API keys, or sensitive data",
       "enabled": true,
       "severity": "error",
-      "rule": "Detect patterns like:\n- API keys or tokens in plain text\n- Passwords or secrets\n- Database connection strings with credentials\n- Private keys or certificates"
+      "rule": "Detect patterns like:\n- API keys or tokens in plain text (e.g. ghp_xxx, sk-xxx, AKIA...)\n- Passwords or secrets with actual values\n- Database connection strings with credentials\n- Private keys or certificates\n\nIGNORE:\n- Empty placeholder variables (VAR_NAME= with no value)\n- Documentation examples in README or markdown files\n- Environment variable names without values"
     },
     {
       "name": "missing-error-handling",
