@@ -1,7 +1,10 @@
 name: Azure DevOps PR Review
 
-# Disable CI triggers - only run on PRs
-trigger: none
+# Run on pushes to feature branches (for testing)
+trigger:
+  branches:
+    include:
+      - feature/*
 
 # Run on pull requests to main and develop
 pr:
@@ -26,11 +29,14 @@ steps:
   # Setup Copilot Authentication
   - script: |
       echo "Setting up Copilot authentication..."
-      echo "✅ COPILOT_TOKEN environment variable configured"
+      if [ -z "$COPILOT_TOKEN" ]; then
+        echo "##vso[task.logissue type=warning]COPILOT_TOKEN is not set - add it as a pipeline variable"
+      else
+        echo "✅ COPILOT_TOKEN environment variable configured"
+      fi
     displayName: 'Setup Copilot Authentication'
     env:
-      GH_TOKEN: $(COPILOT_TOKEN)
-      GITHUB_TOKEN: $(COPILOT_TOKEN)
+      COPILOT_TOKEN: $(COPILOT_TOKEN)
 
   # Install dependencies and build the tool
   - script: |
@@ -39,9 +45,44 @@ steps:
       npm run build
     displayName: 'Build PR Reviewer Tool'
 
+  # Get PR ID - use Azure DevOps REST API if not in PR context
+  - script: |
+      echo "Build Reason: $(Build.Reason)"
+      echo "Source Branch: $(Build.SourceBranch)"
+      
+      if [ "$(Build.Reason)" == "PullRequest" ]; then
+        echo "Running in PR context, PR ID: $(System.PullRequest.PullRequestId)"
+        echo "##vso[task.setvariable variable=PR_ID]$(System.PullRequest.PullRequestId)"
+      else
+        echo "Not running in PR context - attempting to find PR for this branch..."
+        # Try to find an open PR for this branch using Azure DevOps API
+        BRANCH_NAME=$(echo "$(Build.SourceBranch)" | sed 's|refs/heads/||')
+        echo "Looking for PR with source branch: $BRANCH_NAME"
+        
+        PR_RESPONSE=$(curl -s -u ":$(System.AccessToken)" \
+          "$(System.CollectionUri)$(System.TeamProject)/_apis/git/repositories/$(Build.Repository.Name)/pullrequests?searchCriteria.sourceRefName=refs/heads/$BRANCH_NAME&searchCriteria.status=active&api-version=7.0")
+        
+        PR_ID=$(echo "$PR_RESPONSE" | jq -r '.value[0].pullRequestId // empty')
+        
+        if [ -n "$PR_ID" ] && [ "$PR_ID" != "null" ]; then
+          echo "Found PR ID: $PR_ID"
+          echo "##vso[task.setvariable variable=PR_ID]$PR_ID"
+        else
+          echo "No open PR found for branch $BRANCH_NAME"
+          echo "##vso[task.setvariable variable=PR_ID]"
+        fi
+      fi
+    displayName: 'Detect PR ID'
+
   # Run the AI code review
   - script: |
       echo "Running AI-powered code review..."
+      echo "PR ID: $(PR_ID)"
+      
+      if [ -z "$(PR_ID)" ]; then
+        echo "No PR ID available - skipping review"
+        exit 0
+      fi
       
       node dist/index.js review \
         --platform azdo \
@@ -49,7 +90,7 @@ steps:
         --azdo-pat "$(System.AccessToken)" \
         --project "$(System.TeamProject)" \
         --repository "$(Build.Repository.Name)" \
-        --pr-id "$(System.PullRequest.PullRequestId)" \
+        --pr-id "$(PR_ID)" \
         --use-api \
         --post-comment \
         --output "$(Build.ArtifactStagingDirectory)/review-report.md"
@@ -66,7 +107,7 @@ steps:
       
       exit 0
     displayName: 'Run AI Code Review'
-    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    condition: succeeded()
     env:
       COPILOT_TOKEN: $(COPILOT_TOKEN)
       GH_TOKEN: $(COPILOT_TOKEN)
@@ -79,4 +120,4 @@ steps:
       ArtifactName: 'code-review-report'
       publishLocation: 'Container'
     displayName: 'Publish Review Report'
-    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    condition: and(succeeded(), ne(variables['PR_ID'], ''))
