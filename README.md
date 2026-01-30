@@ -43,12 +43,12 @@ Create a `.env` file in your project root or set environment variables:
 PLATFORM=github
 
 # GitHub Configuration
-GITHUB_TOKEN=ghp_your_github_token
+GITHUB_TOKEN=<your-github-token>
 GITHUB_OWNER=your-username-or-org
 
 # Azure DevOps Configuration
 AZDO_ORG_URL=https://dev.azure.com/your-organization
-AZDO_PAT=your-personal-access-token
+AZDO_PAT=<your-azure-devops-pat>
 AZDO_PROJECT=YourProject
 
 # Common Configuration
