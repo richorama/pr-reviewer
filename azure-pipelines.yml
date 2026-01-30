@@ -1,10 +1,9 @@
 name: Azure DevOps PR Review
 
-trigger:
-  branches:
-    include:
-      - '*'
+# Disable CI triggers - only run on PRs
+trigger: none
 
+# Run on pull requests to main and develop
 pr:
   branches:
     include:
