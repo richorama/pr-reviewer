@@ -4,7 +4,7 @@
   "name": "PRReviewer",
   "friendlyName": "AI PR Reviewer",
   "description": "Review pull requests using AI-powered analysis with GitHub Copilot",
-  "helpMarkDown": "[More Information](https://github.com/YOUR_USERNAME/pr-reviewer)",
+  "helpMarkDown": "[More Information](https://github.com/richorama/pr-reviewer)",
   "category": "Build",
   "author": "pr-reviewer",
   "version": {

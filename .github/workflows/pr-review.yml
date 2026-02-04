@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: AI PR Review
-        uses: ./  # For testing in-repo, users would use: YOUR_USERNAME/pr-reviewer@v1
+        uses: ./  # For testing in-repo, users would use: richorama/pr-reviewer@v1
         with:
           copilot-token: ${{ secrets.COPILOT_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

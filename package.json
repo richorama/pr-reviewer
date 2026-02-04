@@ -9,7 +9,9 @@
     "build:azdo-task": "mkdir -p azure-devops/task && cp dist/azure-pipelines-task.js azure-devops/task/ && cp dist/index.js azure-devops/task/ && cp -r dist/azure-devops azure-devops/task/ && cp -r dist/github azure-devops/task/ && cp -r dist/review azure-devops/task/ && cp -r dist/types azure-devops/task/ && cp package.json azure-devops/task/ && cd azure-devops/task && npm install --production",
     "package:azdo": "npm run build && cd azure-devops && tfx extension create --manifest-globs vss-extension.json",
     "lint": "eslint src --ext .ts",
-    "test": "echo \"Tests not yet implemented\" && exit 0"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "keywords": [
     "azure-devops",
@@ -29,8 +31,11 @@
     "dotenv": "^16.4.7"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.14",
     "@types/node": "^20.17.14",
+    "jest": "^29.7.0",
     "tfx-cli": "^0.17.0",
+    "ts-jest": "^29.2.5",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   },
