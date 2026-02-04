@@ -1,0 +1,66 @@
+name: 'AI PR Reviewer'
+description: 'AI-powered pull request review using GitHub Copilot for code quality, security, and best practices'
+author: 'pr-reviewer'
+branding:
+  icon: 'check-circle'
+  color: 'green'
+
+inputs:
+  copilot-token:
+    description: 'GitHub Personal Access Token with Copilot access'
+    required: true
+  github-token:
+    description: 'GitHub token for API access (use secrets.GITHUB_TOKEN)'
+    required: true
+    default: ${{ github.token }}
+  config-path:
+    description: 'Path to review configuration file (auto-discovers if not provided)'
+    required: false
+  post-comment:
+    description: 'Post review results as a PR comment'
+    required: false
+    default: 'true'
+  fail-on-error:
+    description: 'Fail the workflow if errors are found'
+    required: false
+    default: 'true'
+
+outputs:
+  report:
+    description: 'Full review report as JSON'
+  errors:
+    description: 'Number of errors found'
+  warnings:
+    description: 'Number of warnings found'
+  info:
+    description: 'Number of info findings'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        npm ci
+    
+    - name: Build
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        npm run build
+    
+    - name: Run PR Review
+      shell: bash
+      run: node ${{ github.action_path }}/dist/github-action.js
+      env:
+        INPUT_COPILOT-TOKEN: ${{ inputs.copilot-token }}
+        INPUT_GITHUB-TOKEN: ${{ inputs.github-token }}
+        INPUT_CONFIG-PATH: ${{ inputs.config-path }}
+        INPUT_POST-COMMENT: ${{ inputs.post-comment }}
+        INPUT_FAIL-ON-ERROR: ${{ inputs.fail-on-error }}

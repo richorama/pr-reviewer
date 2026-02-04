@@ -2,52 +2,90 @@
 
 > 🚀 Automate your code reviews with AI-powered analysis
 
-An AI-powered CLI tool that uses **GitHub Copilot SDK** to perform intelligent code reviews on **GitHub** and **Azure DevOps** pull requests. This tool applies customizable business-specific rules to check for naming conventions, deleted code blocks, security issues, and more.
+AI-powered pull request review tool using **GitHub Copilot** for intelligent code analysis on **GitHub** and **Azure DevOps**. Distributed as a GitHub Action and Azure DevOps Marketplace Extension for easy consumption.
 
 ## Features
 
-- 🤖 **AI-Powered Reviews**: Leverages GitHub Copilot's advanced language models for intelligent code analysis
-- 🔧 **Customizable Checks**: Define your own business rules in JSON configuration
-- 📊 **Detailed Reports**: Get comprehensive reports in console, markdown, or posted directly to your PR
-- ⚡ **Multi-Platform**: Works with both GitHub and Azure DevOps repositories
-- 🎯 **Multiple Check Types**: Built-in checks for naming conventions, deleted code, security, and more
+- 🤖 **AI-Powered Reviews**: Leverages GitHub Copilot's language models for intelligent code analysis
+- 🔧 **Customizable Checks**: Define your own business rules with natural language
+- 📊 **PR Comments**: Posts detailed review findings directly to your pull requests
+- ⚡ **Multi-Platform**: GitHub Actions and Azure DevOps Pipelines
+- 🎯 **Convention-Based**: Auto-discovers config files, no setup required
+- ✅ **CI/CD Integration**: Fails builds on errors, warns on issues
 
-## Prerequisites
+## Quick Start
 
-1. **Node.js** >= 18.0.0
-2. **GitHub Copilot subscription** - The tool requires access to GitHub Copilot's AI service
-3. **Platform-specific access token**:
-   - **GitHub**: Personal Access Token with `repo` scope
-   - **Azure DevOps**: Personal Access Token with Code (Read) and Pull Request Threads (Read & Write)
+### GitHub Actions
 
-## Installation
+Add to `.github/workflows/pr-review.yml`:
 
-This tool lives in your repository and is not published to npm.
+```yaml
+name: AI PR Review
 
-```bash
-# Install dependencies
-npm install
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
 
-# Build the project
-npm run build
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    steps:
+      - uses: YOUR_USERNAME/pr-reviewer@v1
+        with:
+          copilot-token: ${{ secrets.COPILOT_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Azure DevOps
+
+Install the extension from the [Visual Studio Marketplace](https://marketplace.visualstudio.com), then add to your pipeline:
+
+```yaml
+steps:
+  - task: PRReviewer@1
+    inputs:
+      copilotToken: $(COPILOT_TOKEN)
 ```
 
 ## Configuration
 
-### 1. Review Configuration
+### Convention-Based Config Discovery
 
-Create a `review-config.json` file to define your custom checks. See [review-config.json](./review-config.json) for a complete example.
+Create one of these files in your repo (checked in order):
 
-Example configuration:
+1. `pr-review.config.json`
+2. `.pr-review.json`
+3. `.github/pr-review.json`
+4. `review-config.json` (legacy)
+
+### Example Configuration
 
 ```json
 {
   "checks": [
     {
       "name": "naming-conventions",
-      "description": "Verify that file and variable names follow naming conventions",
+      "description": "Verify file and variable names follow camelCase/PascalCase",
       "enabled": true,
       "severity": "warning",
+      "rule": "Check that files use camelCase or kebab-case, classes use PascalCase..."
+    },
+    {
+      "name": "security-check",
+      "description": "Detect hardcoded credentials and security issues",
+      "enabled": true,
+      "severity": "error",
+      "rule": "Identify hardcoded API keys, passwords, tokens, or secrets..."
+    }
+  ]
+}
+```
+
+See [review-config.json](./review-config.json) for complete examples.
       "rule": "Check that files use camelCase or kebab-case, classes use PascalCase..."
     },
     {

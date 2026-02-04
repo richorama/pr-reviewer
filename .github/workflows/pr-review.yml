@@ -12,60 +12,10 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: AI PR Review
+        uses: ./  # For testing in-repo, users would use: YOUR_USERNAME/pr-reviewer@v1
         with:
-          node-version: '18'
-
-      # IMPORTANT: Set Copilot authentication
-      # You need a GitHub account with Copilot access
-      # Add COPILOT_TOKEN as a repository secret with a PAT that has Copilot access
-      - name: Setup Copilot Authentication
-        run: |
-          if [ -z "${{ secrets.COPILOT_TOKEN }}" ]; then
-            echo "❌ ERROR: COPILOT_TOKEN secret is not set!"
-            echo ""
-            echo "To fix this:"
-            echo "1. Go to Settings → Secrets and variables → Actions"
-            echo "2. Click 'New repository secret'"
-            echo "3. Name: COPILOT_TOKEN"
-            echo "4. Value: A Personal Access Token with 'copilot' scope"
-            echo ""
-            echo "See README.md for detailed instructions."
-            exit 1
-          fi
-          
-          echo "✅ COPILOT_TOKEN is configured"
-
-      - name: Install dependencies and build
-        run: |
-          npm ci
-          npm run build
-
-      # Note: Using REST API mode which doesn't require the Copilot CLI
-      # The COPILOT_TOKEN needs 'copilot' scope for API access
-
-      - name: Run AI Code Review
-        run: |
-          node dist/index.js review \
-            --platform github \
-            --github-token ${{ secrets.GITHUB_TOKEN }} \
-            --owner ${{ github.repository_owner }} \
-            --repository ${{ github.event.repository.name }} \
-            --pr-id ${{ github.event.pull_request.number }} \
-            --use-api \
-            --post-comment \
-            --output review-report.md
-        env:
-          COPILOT_TOKEN: ${{ secrets.COPILOT_TOKEN }}
-          GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
-
-      - name: Upload Review Report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: pr-review-report
-          path: review-report.md
+          copilot-token: ${{ secrets.COPILOT_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          post-comment: true
+          fail-on-error: true
