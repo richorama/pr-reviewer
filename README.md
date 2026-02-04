@@ -34,7 +34,7 @@ jobs:
       pull-requests: write
     
     steps:
-      - uses: YOUR_USERNAME/pr-reviewer@v1
+      - uses: richorama/pr-reviewer@v1
         with:
           copilot-token: ${{ secrets.COPILOT_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -101,7 +101,7 @@ See [review-config.json](./review-config.json) for complete examples.
 
 ### Built-in Checks
 
-The tool includes these pre-configured checks:
+The tool includes these pre-configured checks in [review-config.json](./review-config.json):
 
 1. **Naming Conventions** - Validates file and variable naming standards
 2. **Deleted Code Blocks** - Flags large code deletions
@@ -112,142 +112,161 @@ The tool includes these pre-configured checks:
 7. **Code Duplication** - Identifies potential duplicate code
 8. **Missing Tests** - Checks if new features include tests
 
-## Usage
+## Setup
 
-### GitHub Usage
+### Prerequisites
 
-```bash
-# Review a GitHub PR
-pr-review review \
-  --platform github \
-  --github-token $GITHUB_TOKEN \
-  --owner your-username \
-  --repository your-repo \
-  --pr-id 123
-
-# Using environment variables from .env
-pr-review review \
-  --platform github \
-  --github-token $GITHUB_TOKEN \
-  --owner $GITHUB_OWNER \
-  --repository $REPOSITORY \
-  --pr-id $PR_ID
-```
-
-### Azure DevOps Usage
-
-```bash
-# Review an Azure DevOps PR
-pr-review review \
-  --platform azdo \
-  --org-url https://dev.azure.com/your-org \
-  --azdo-pat $AZDO_PAT \
-  --project YourProject \
-  --repository YourRepo \
-  --pr-id 123
-```
-
-### Post Results to PR
-
-```bash
-# GitHub
-pr-review review \
-  --platform github \
-  --github-token $GITHUB_TOKEN \
-  --owner $GITHUB_OWNER \
-  --repository $REPOSITORY \
-  --pr-id $PR_ID \
-  --post-comment
-
-# Azure DevOps
-pr-review review \
-  --platform azdo \
-  --org-url $AZDO_ORG_URL \
-  --azdo-pat $AZDO_PAT \
-  --project $AZDO_PROJECT \
-  --repository $REPOSITORY \
-  --pr-id $PR_ID \
-  --post-comment
-```
-
-### Save Report to File
-
-```bash
-pr-review review \
-  --platform github \
-  --github-token $GITHUB_TOKEN \
-  --owner $GITHUB_OWNER \
-  --repository $REPOSITORY \
-  --pr-id $PR_ID \
-  --output review-report.md
-```CI/CD Integration
-The tool runs directly from the repository in your CI/CD pipeline. The workflows will check out the code, build the tool, and run it.
-### Prerequisites for CI/CD
-
-**IMPORTANT**: The GitHub Copilot CLI requires authentication in CI/CD environments. You need:
-
-1. **A GitHub account with Copilot access** (the account running the reviews)
-2. **A Personal Access Token (PAT)** from that account
-3. **The PAT stored as a secret** in your CI/CD platform
-
-The `GITHUB_TOKEN` provided by Actions/Pipelines **cannot** authenticate with Copilot - you need a separate PAT from a Copilot-enabled account.
-
-### GitHub Actions
-
-**Required Secrets:**
-- `COPILOT_TOKEN` - ⚠️ **YOU MUST CREATE** - Personal Access Token from a Copilot-enabled account
-- `GITHUB_TOKEN` - ✅ **AUTOMATIC** - Provided by GitHub Actions (no setup needed)
-
-**Setup Steps:**
-1. **Create a Personal Access Token:**
+1. **GitHub Copilot subscription** - Required for AI-powered analysis
+2. **Personal Access Token** with Copilot access:
    - Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
-   - Click "Generate new token (classic)"
-   - Note: "Copilot CI/CD Token"
-   - Expiration: Choose your preference
-   - **Required Scopes:** Check `copilot` scope (for Copilot API access)
-   - Copy the token
+   - Generate new token with `copilot` scope
+   - Store as `COPILOT_TOKEN` secret in your repository/pipeline
 
-2. **Add the secret to your repository:**
-   - Go to your repository → Settings → Secrets and variables → Actions
-   - Click "New repository secret"
+### GitHub Actions Setup
+
+1. Add `COPILOT_TOKEN` secret:
+   - Repository → Settings → Secrets and variables → Actions
+   - New repository secret: `COPILOT_TOKEN`
+   - Value: Your PAT with Copilot access
+
+2. The `GITHUB_TOKEN` is automatically provided by GitHub Actions
+
+### Azure DevOps Setup
+
+1. Add `COPILOT_TOKEN` as a pipeline variable:
+   - Pipeline → Edit → Variables
    - Name: `COPILOT_TOKEN`
-   - Value: Paste your PAT
-   - Click "Add secret"
+   - Value: Your PAT with Copilot access
+   - ✅ Keep this value secret
 
-3. The workflow is already in place at `.github/workflows/pr-review.yml`
+2. Enable OAuth token access in pipeline YAML:
+   ```yaml
+   jobs:
+     - job: review
+       pool:
+         vmImage: 'ubuntu-latest'
+       steps:
+         - task: PRReviewer@1
+           inputs:
+             copilotToken: $(COPILOT_TOKEN)
+   ```
 
-**What each secret does:**
-- `COPILOT_TOKEN` - Authenticates with GitHub Copilot's AI service to run code analysis
-- `GITHUB_TOKEN` - Accesses the PR (read files, post comments) - automatically provided with correct permissions
+## Advanced Configuration
 
-Create `.github/workflows/pr-review.yml`:
+### Custom Config Path
 
+Specify a custom config file location:
+
+**GitHub Actions:**
 ```yaml
-name: AI PR Review
+- uses: richorama/pr-reviewer@v1
+  with:
+    copilot-token: ${{ secrets.COPILOT_TOKEN }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    config-path: './custom/path/review-config.json'
+```
 
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+**Azure DevOps:**
+```yaml
+- task: PRReviewer@1
+  inputs:
+    copilotToken: $(COPILOT_TOKEN)
+    configPath: './custom/path/review-config.json'
+```
 
-jobs:
-  ai-review:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
+### Disable Fail on Error
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+By default, the tool fails the build when errors are found. To disable:
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
+**GitHub Actions:**
+```yaml
+- uses: richorama/pr-reviewer@v1
+  with:
+    copilot-token: ${{ secrets.COPILOT_TOKEN }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    fail-on-error: false
+```
 
-      - name: Install GitHub CLI and Copilot extension
-        run: |\n          gh extension install github/gh-copilot || true\n          gh copilot --version\n\n      - name: Authenticate GitHub CLI for Copilot
-        run: |
+**Azure DevOps:**
+```yaml
+- task: PRReviewer@1
+  inputs:
+    copilotToken: $(COPILOT_TOKEN)
+    failOnError: false
+```
+
+### Disable PR Comments
+
+To only run checks without posting comments:
+
+**GitHub Actions:**
+```yaml
+- uses: richorama/pr-reviewer@v1
+  with:
+    copilot-token: ${{ secrets.COPILOT_TOKEN }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    post-comment: false
+```
+
+**Azure DevOps:**
+```yaml
+- task: PRReviewer@1
+  inputs:
+    copilotToken: $(COPILOT_TOKEN)
+    postComment: false
+```
+
+## Development
+
+### Local Development
+
+```bash
+# Install dependencies
+npm install
+
+# Build
+npm run build
+
+# Run tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+### Package Azure DevOps Extension
+
+```bash
+# Build and package extension
+npm run package:azdo
+
+# Output: azure-devops/YOUR_PUBLISHER_ID.pr-reviewer-1.0.0.vsix
+```
+
+See [PUBLISHING.md](./PUBLISHING.md) for complete publishing instructions.
+
+## Architecture
+
+- **Core Library** ([src/index.ts](src/index.ts)) - Main review logic with config discovery
+- **GitHub Action Wrapper** ([src/github-action.ts](src/github-action.ts)) - GitHub Actions integration
+- **Azure DevOps Wrapper** ([src/azure-pipelines-task.ts](src/azure-pipelines-task.ts)) - Azure Pipelines integration
+- **Platform Clients** - GitHub ([src/github/client.ts](src/github/client.ts)) and Azure DevOps ([src/azure-devops/client.ts](src/azure-devops/client.ts)) API clients
+- **Review Engine** ([src/review/copilot-api-engine.ts](src/review/copilot-api-engine.ts)) - GitHub Copilot API integration
+- **Reporter** ([src/review/reporter.ts](src/review/reporter.ts)) - Markdown and console report formatting
+
+## Contributing
+
+Contributions welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with tests
+4. Run `npm test` to verify
+5. Submit a pull request
+
+## License
+
+MIT
           echo ${{ secrets.GITHUB_COPILOT_TOKEN }} | gh auth login --with-token
           gh auth status
         env:
@@ -378,133 +397,18 @@ npm test
 │   │   ├── copilot-engine.ts  # Copilot SDK integration
 │   │   └── reporter.ts        # Report formatting
 │   ├── types/
-│   │   └── index.ts           # TypeScript type definitions
-│   └── index.ts               # CLI entry point
-├── review-config.json         # Default review configuration
-├── .env.example               # Environment variables template
-├── package.json
-├── tsconfig.json
-└── README.md
-```
-
-## Customizing Checks
-
-You can customize checks by modifying `review-config.json`:
-
-```json
-{
-  "checks": [
-    {
-      "name": "your-custom-check",
-      "description": "Description of what this check does",
-      "enabled": true,
-      "severity": "error",
-      "rule": "Detailed instructions for what Copilot should check..."
-    }
-  ]
-}
-```
-
-The `rule` field should contain clear, specific instructions for the AI to follow. The more detailed your rule, the better the analysis.
-
-## Troubleshooting
-
-### "Cannot call write after a stream was destroyed" or similar Copilot SDK errors
-
-The Copilot SDK needs to communicate with the GitHub Copilot CLI. Make sure:
-
-1. **Dependencies are installed**: Run `npm install` to ensure `@github/copilot` is installed
-2. **Copilot authentication**: Set `GH_TOKEN` or `GITHUB_TOKEN` environment variable with a PAT that has Copilot access
-3. **You have Copilot access**: The authenticated GitHub account must have an active Copilot subscription
-
-If running locally:
-```bash
-# Install dependencies
-npm install
-
-# Set your Copilot token
-export GITHUB_TOKEN=your_token_here
-
-# Run the tool
-npm run build
-node dist/index.js review ...
-```
-
-### "GitHub Copilot CLI not found"
-
-This means the `@github/copilot` package is not installed:
-
-```bash
-# Install dependencies
-npm install
-
-# Verify the package is installed
-ls node_modules/@github/copilot
-```
-
-### "Not authenticated with Copilot" in CI/CD
-
-This is the most common issue. The Copilot CLI needs authentication to access the Copilot API.
-
-**Solution:**
-1. Create a GitHub Personal Access Token from an account that has Copilot access
-   - **Required scopes:** `copilot` (for Copilot API access)
-2. Add it as a secret to your CI/CD platform:
-   - **GitHub Actions**: Add as `COPILOT_TOKEN` in repository secrets (Settings → Secrets and variables → Actions → New repository secret)
-   - **Azure Pipelines**: Add as `COPILOT_TOKEN` in pipeline variables (mark as secret)
-3. The CLI will use the `GH_TOKEN` or `GITHUB_TOKEN` environment variable for authentication
-
-**Why do I need TWO tokens in GitHub Actions?**
-- `GITHUB_TOKEN` (automatic) - For accessing the PR (reading code, posting comments)
-- `COPILOT_TOKEN` (manual) - For accessing GitHub Copilot's AI service
-- They serve different purposes and `GITHUB_TOKEN` doesn't include Copilot API access
-
-**For GitHub:**
-- Ensure your Personal Access Token has the `copilot` scope
-
-**For Azure DevOps:**
-- Ensure your PAT has Code (Read) and Pull Request Threads (Read & Write) permissionsess Token has the correct permissions:
-- Code (Read)
-- Pull Request Threads (Read & Write)
-
-### "No file changes to review"
-
-This can happen if:
-- The PR has no actual code changes
-- The API couldn't fetch the changes (check token permissions)
-
-### CI/CD Access Summary
-
-**What the tool needs access to:**
-
-| Component | GitHub Actions | Azure Pipelines |
-|-----------|---------------|-----------------|
-| **PR Metadata** | ✅ `GITHUB_TOKEN` (auto) | ✅ `System.AccessToken` (auto) |
-| **PR Files/Diffs** | ✅ `GITHUB_TOKEN` (auto) | ✅ `System.AccessToken` (auto) |
-| **Post Comments** | ✅ `GITHUB_TOKEN` (auto) | ✅ `System.AccessToken` (auto) |
-| **Copilot CLI Auth** | ⚠️ `COPILOT_TOKEN` (manual) | ⚠️ `COPILOT_TOKEN` (manual) |
-
-**Summary:** Only ONE secret needs manual setup (`COPILOT_TOKEN`). The platform's default tokens handle PR access automatically.
-
-## Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
 ## License
 
 MIT
 
 ## Credits
 
-BuiOctokit (GitHub REST API)](https://github.com/octokit/rest.js)
+Built with:
+- [GitHub Copilot API](https://docs.github.com/en/copilot)
+- [Octokit (GitHub REST API)](https://github.com/octokit/rest.js)
 - [Azure DevOps Node API](https://github.com/microsoft/azure-devops-node-api)
-- [Commander.js](https://github.com/tj/commander.js)
+- [GitHub Actions Toolkit](https://github.com/actions/toolkit)
 
 ---
 
-**Note**: This tool requires a GitHub Copilot subscription and an active Azure DevOps organization.
+**Note**: This tool requires a GitHub Copilot subscription.
