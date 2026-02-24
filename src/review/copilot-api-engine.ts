@@ -19,11 +19,11 @@ export class CopilotAPIEngine {
     }
     
     this.token = token;
-    console.log("Copilot API Engine initialized with token");
+    // Silently initialized
   }
 
   async initialize(): Promise<void> {
-    console.log("Verifying Copilot API access...");
+    // Verify API access silently
     
     try {
       // Test the API with a simple request
@@ -47,8 +47,7 @@ export class CopilotAPIEngine {
       }
       
       const models = await response.json();
-      console.log("Available models:", JSON.stringify(models, null, 2));
-      console.log("✅ Copilot API access verified");
+      // API access verified (models available)
     } catch (error) {
       if (error instanceof TypeError && error.message.includes("fetch")) {
         throw new Error("Network error connecting to Copilot API");
@@ -65,7 +64,7 @@ export class CopilotAPIEngine {
     const enabledChecks = checks.filter((c) => c.enabled);
 
     for (const check of enabledChecks) {
-      console.log(`Running check: ${check.name}...`);
+      // Running check silently
 
       try {
         const checkResults = await this.runCheck(check, fileChanges);
@@ -121,7 +120,6 @@ If no issues found: [{"passed": true, "message": "Check passed"}]
 
 Respond with ONLY the JSON array, no markdown, no explanation:`;
 
-    console.log(`  Sending request to Copilot API (${userPrompt.length} chars)...`);
     const startTime = Date.now();
 
     try {
@@ -154,12 +152,10 @@ Respond with ONLY the JSON array, no markdown, no explanation:`;
         choices?: Array<{ message?: { content?: string } }>;
       };
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.log(`  Response received in ${duration}s`);
 
       const content = data.choices?.[0]?.message?.content?.trim();
       
       if (!content) {
-        console.log(`  Warning: Empty response from Copilot`);
         return [{
           checkName: check.name,
           passed: false,
@@ -168,7 +164,6 @@ Respond with ONLY the JSON array, no markdown, no explanation:`;
         }];
       }
 
-      console.log(`  Response content (first 200 chars): ${content.substring(0, 200)}`);
 
       // Parse JSON from response
       let jsonStr = content;
@@ -193,9 +188,7 @@ Respond with ONLY the JSON array, no markdown, no explanation:`;
         line: finding.line,
       }));
     } catch (error) {
-      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.error(`  Failed after ${duration}s:`, error instanceof Error ? error.message : error);
-
+      // Check failed silently
       return [{
         checkName: check.name,
         passed: false,
@@ -207,6 +200,5 @@ Respond with ONLY the JSON array, no markdown, no explanation:`;
 
   async cleanup(): Promise<void> {
     // No cleanup needed for REST API
-    console.log("Copilot API Engine cleanup complete");
   }
 }

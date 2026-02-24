@@ -73,12 +73,8 @@ export class LocalFileReader {
     const gitInfo = await this.getGitInfo();
 
     if (gitInfo.isMainBranch) {
-      console.log(`📁 On ${gitInfo.currentBranch} branch - reviewing all repository files`);
       return this.getAllFiles();
     } else {
-      console.log(
-        `🔀 On ${gitInfo.currentBranch} branch - reviewing changes since ${gitInfo.baseBranch}`
-      );
       return this.getChangedFiles(gitInfo.baseBranch);
     }
   }
@@ -113,11 +109,8 @@ export class LocalFileReader {
           });
         } catch (error) {
           // Skip files that can't be read (binary, etc.)
-          console.log(`⚠️  Skipping ${file} (cannot read)`);
         }
       }
-
-      console.log(`📊 Found ${fileChanges.length} files to review`);
       return fileChanges;
     } catch (error) {
       throw new Error(
@@ -185,7 +178,7 @@ export class LocalFileReader {
           try {
             content = await fs.readFile(fullPath, "utf-8");
           } catch (error) {
-            console.log(`⚠️  Skipping ${filePath} (cannot read)`);
+            // Skip files that can't be read
             continue;
           }
 
@@ -209,7 +202,6 @@ export class LocalFileReader {
         });
       }
 
-      console.log(`📊 Found ${fileChanges.length} changed files to review`);
       return fileChanges;
     } catch (error) {
       throw new Error(
