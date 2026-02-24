@@ -1,9 +1,12 @@
 {
   "name": "pr-reviewer",
   "version": "1.0.0",
-  "description": "AI-powered PR reviewer for Azure DevOps and GitHub using GitHub Copilot API",
+  "description": "AI-powered code reviewer CLI using GitHub Copilot API",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "pr-review": "dist/cli.js"
+  },
   "scripts": {
     "build": "tsc && npm run build:azdo-task",
     "build:azdo-task": "mkdir -p azure-devops/task && cp dist/azure-pipelines-task.js azure-devops/task/ && cp dist/index.js azure-devops/task/ && cp -r dist/azure-devops azure-devops/task/ && cp -r dist/github azure-devops/task/ && cp -r dist/review azure-devops/task/ && cp -r dist/types azure-devops/task/ && cp package.json azure-devops/task/ && cd azure-devops/task && npm install --production",
@@ -14,11 +17,13 @@
     "test:coverage": "jest --coverage"
   },
   "keywords": [
-    "azure-devops",
-    "pr-review",
+    "code-review",
+    "cli",
     "copilot",
     "ai",
-    "code-review"
+    "git",
+    "code-quality",
+    "static-analysis"
   ],
   "author": "",
   "license": "MIT",

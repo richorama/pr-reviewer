@@ -1,19 +1,52 @@
-# AI-Powered PR Reviewer
+# AI-Powered Code Review CLI
 
-> 🚀 Automate your code reviews with AI-powered analysis
+> 🚀 Review your code with AI before committing
 
-AI-powered pull request review tool using **GitHub Copilot** for intelligent code analysis on **GitHub** and **Azure DevOps**. Distributed as a GitHub Action and Azure DevOps Marketplace Extension for easy consumption.
+AI-powered code review tool using **GitHub Copilot** for intelligent code analysis. Run locally on your codebase, or integrate with **GitHub Actions** and **Azure DevOps Pipelines**.
 
 ## Features
 
 - 🤖 **AI-Powered Reviews**: Leverages GitHub Copilot's language models for intelligent code analysis
+- 💻 **Local CLI**: Review code changes before pushing to a PR
+- 🌿 **Branch-Aware**: Automatically reviews changed files on feature branches, or entire repo on main
 - 🔧 **Customizable Checks**: Define your own business rules with natural language
-- 📊 **PR Comments**: Posts detailed review findings directly to your pull requests
-- ⚡ **Multi-Platform**: GitHub Actions and Azure DevOps Pipelines
+- 📊 **Detailed Reports**: Console output with optional markdown file export
+- ⚡ **Multi-Platform**: CLI, GitHub Actions, and Azure DevOps Pipelines
 - 🎯 **Convention-Based**: Auto-discovers config files, no setup required
 - ✅ **CI/CD Integration**: Fails builds on errors, warns on issues
 
 ## Quick Start
+
+### CLI Usage
+
+1. **Install globally:**
+   ```bash
+   npm install -g pr-reviewer
+   ```
+
+2. **Set your Copilot token:**
+   ```bash
+   export COPILOT_TOKEN="your-github-copilot-token"
+   ```
+
+3. **Run in your project:**
+   ```bash
+   # Review current directory
+   pr-review
+
+   # Review specific directory
+   pr-review ./my-project
+
+   # Save report to file
+   pr-review --output review-report.md
+
+   # Fail on errors (useful for pre-commit hooks)
+   pr-review --fail-on-error
+   ```
+
+**How it works:**
+- On **feature branches**: Reviews only the files changed since branching from main/develop
+- On **main/master/develop**: Reviews all files in the repository
 
 ### GitHub Actions
 
@@ -121,6 +154,47 @@ The tool includes these pre-configured checks in [review-config.json](./review-c
    - Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
    - Generate new token with `copilot` scope
    - Store as `COPILOT_TOKEN` secret in your repository/pipeline
+
+### CLI Setup
+
+1. **Install the CLI:**
+   ```bash
+   npm install -g pr-reviewer
+   ```
+
+2. **Set your Copilot token:**
+   ```bash
+   export COPILOT_TOKEN="ghp_your_token_here"
+   ```
+
+   Or add to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.):
+   ```bash
+   export COPILOT_TOKEN="ghp_your_token_here"
+   ```
+
+3. **Create a review config** (optional - uses defaults if not found):
+   ```bash
+   # Copy example config to your project
+   curl -o pr-review.config.json https://raw.githubusercontent.com/richorama/pr-reviewer/main/review-config.json
+   ```
+
+4. **Run the review:**
+   ```bash
+   pr-review
+   ```
+
+### CLI Options
+
+```
+pr-review [directory] [options]
+
+Options:
+  --config <path>        Path to review configuration file
+  --output <path>        Save review report to file
+  --fail-on-error        Exit with code 1 if errors found
+  --verbose, -v          Show detailed output
+  --help, -h             Show help message
+```
 
 ### GitHub Actions Setup
 
