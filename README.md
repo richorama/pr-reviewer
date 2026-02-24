@@ -18,9 +18,24 @@ AI-powered code review tool using **GitHub Copilot** for intelligent code analys
 
 ### Installation
 
-```bash
-npm install -g pr-reviewer
-```
+1. **Clone and build:**
+   ```bash
+   git clone https://github.com/richorama/pr-reviewer.git
+   cd pr-reviewer
+   npm install
+   npm run build
+   ```
+
+2. **Link globally (optional):**
+   ```bash
+   npm link
+   # Now you can use 'pr-review' command anywhere
+   ```
+
+   Or just run directly:
+   ```bash
+   node dist/cli.js
+   ```
 
 ### Setup
 
@@ -39,17 +54,14 @@ npm install -g pr-reviewer
    echo 'export COPILOT_TOKEN="ghp_your_token_here"' >> ~/.bashrc
    ```
 
-3. **Create a review config** (optional):
-   ```bash
-   # Copy example config to your project
-   curl -o pr-review.config.json https://raw.githubusercontent.com/richorama/pr-reviewer/main/review-config.json
-   ```
-
 ### Usage
 
 ```bash
-# Review current directory
+# Review current directory (if you used npm link)
 pr-review
+
+# Or run directly
+node dist/cli.js
 
 # Review specific directory
 pr-review ./my-project
@@ -181,7 +193,11 @@ Add to `.git/hooks/pre-commit`:
 
 ```bash
 #!/bin/bash
+# If you used npm link:
 pr-review --fail-on-error
+
+# Or use direct path:
+# node /path/to/pr-reviewer/dist/cli.js --fail-on-error
 ```
 
 Make it executable:
@@ -192,7 +208,11 @@ chmod +x .git/hooks/pre-commit
 ### CI/CD Integration
 
 ```bash
-# In your CI pipeline
+# In your CI pipeline (after cloning the pr-reviewer repo)
+cd pr-reviewer && npm install && npm run build
+node dist/cli.js --fail-on-error --output review-report.md
+
+# Or if you've made it available globally in your CI environment
 pr-review --fail-on-error --output review-report.md
 ```
 
