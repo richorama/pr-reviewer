@@ -2,98 +2,106 @@
 
 > 🚀 Review your code with AI before committing
 
-AI-powered code review tool using **GitHub Copilot** for intelligent code analysis. Run locally on your codebase, or integrate with **GitHub Actions** and **Azure DevOps Pipelines**.
+AI-powered code review tool using **GitHub Copilot** for intelligent code analysis. Run locally on your codebase to catch issues before they reach pull requests.
 
 ## Features
 
 - 🤖 **AI-Powered Reviews**: Leverages GitHub Copilot's language models for intelligent code analysis
-- 💻 **Local CLI**: Review code changes before pushing to a PR
+- 💻 **Local First**: Review code changes directly in your development workflow
 - 🌿 **Branch-Aware**: Automatically reviews changed files on feature branches, or entire repo on main
 - 🔧 **Customizable Checks**: Define your own business rules with natural language
 - 📊 **Detailed Reports**: Console output with optional markdown file export
-- ⚡ **Multi-Platform**: CLI, GitHub Actions, and Azure DevOps Pipelines
 - 🎯 **Convention-Based**: Auto-discovers config files, no setup required
-- ✅ **CI/CD Integration**: Fails builds on errors, warns on issues
+- ⚡ **Fast & Easy**: Simple CLI with no external dependencies beyond Copilot API
 
 ## Quick Start
 
-### CLI Usage
+### Installation
 
-1. **Install globally:**
+```bash
+npm install -g pr-reviewer
+```
+
+### Setup
+
+1. **Get a GitHub Copilot token:**
+   - Go to [GitHub Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens)
+   - Generate new token (classic) with `copilot` scope
+   - Copy the token
+
+2. **Set your environment variable:**
    ```bash
-   npm install -g pr-reviewer
+   export COPILOT_TOKEN="ghp_your_token_here"
+   ```
+   
+   Add to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.) to make it permanent:
+   ```bash
+   echo 'export COPILOT_TOKEN="ghp_your_token_here"' >> ~/.bashrc
    ```
 
-2. **Set your Copilot token:**
+3. **Create a review config** (optional):
    ```bash
-   export COPILOT_TOKEN="your-github-copilot-token"
+   # Copy example config to your project
+   curl -o pr-review.config.json https://raw.githubusercontent.com/richorama/pr-reviewer/main/review-config.json
    ```
 
-3. **Run in your project:**
-   ```bash
-   # Review current directory
-   pr-review
+### Usage
 
-   # Review specific directory
-   pr-review ./my-project
+```bash
+# Review current directory
+pr-review
 
-   # Save report to file
-   pr-review --output review-report.md
+# Review specific directory
+pr-review ./my-project
 
-   # Fail on errors (useful for pre-commit hooks)
-   pr-review --fail-on-error
-   ```
+# Save report to file
+pr-review --output review-report.md
+
+# Fail on errors (useful for pre-commit hooks)
+pr-review --fail-on-error
+
+# Show all findings including info-level
+pr-review --verbose
+```
 
 **How it works:**
 - On **feature branches**: Reviews only the files changed since branching from main/develop
 - On **main/master/develop**: Reviews all files in the repository
 
-### GitHub Actions
+## CLI Options
 
-Add to `.github/workflows/pr-review.yml`:
-
-```yaml
-name: AI PR Review
-
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-
-jobs:
-  review:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-    
-    steps:
-      - uses: richorama/pr-reviewer@v1
-        with:
-          copilot-token: ${{ secrets.COPILOT_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
+pr-review [directory] [options]
 
-### Azure DevOps
+Arguments:
+  directory              Path to the git repository to review
+                        (default: current directory)
 
-Install the extension from the [Visual Studio Marketplace](https://marketplace.visualstudio.com), then add to your pipeline:
+Options:
+  --config <path>        Path to review configuration file
+                        (default: auto-discover)
+  --output <path>        Save review report to markdown file
+  --fail-on-error        Exit with code 1 if errors found
+                        (useful for CI/CD and git hooks)
+  --verbose, -v          Show detailed output including info-level findings
+  --help, -h             Show help message
 
-```yaml
-steps:
-  - task: PRReviewer@1
-    inputs:
-      copilotToken: $(COPILOT_TOKEN)
+Environment Variables:
+  COPILOT_TOKEN          GitHub Copilot API token (required)
+  GH_TOKEN               Alternative name for COPILOT_TOKEN
+  GITHUB_TOKEN           Alternative name for COPILOT_TOKEN
 ```
 
 ## Configuration
 
-### Convention-Based Config Discovery
+### Auto-Discovery
 
-Create one of these files in your repo (checked in order):
+The tool automatically searches for a config file in this order:
 
 1. `pr-review.config.json`
 2. `.pr-review.json`
 3. `.github/pr-review.json`
-4. `review-config.json` (legacy)
+4. `review-config.json`
 
 ### Example Configuration
 
@@ -102,192 +110,145 @@ Create one of these files in your repo (checked in order):
   "checks": [
     {
       "name": "naming-conventions",
-      "description": "Verify file and variable names follow camelCase/PascalCase",
+      "description": "Verify file and variable names follow conventions",
       "enabled": true,
       "severity": "warning",
-      "rule": "Check that files use camelCase or kebab-case, classes use PascalCase..."
+      "rule": "Check that files use camelCase or kebab-case, classes use PascalCase, constants use UPPER_SNAKE_CASE"
     },
     {
-      "name": "security-check",
-      "description": "Detect hardcoded credentials and security issues",
+      "name": "hardcoded-credentials",
+      "description": "Detect hardcoded credentials and secrets",
       "enabled": true,
       "severity": "error",
-      "rule": "Identify hardcoded API keys, passwords, tokens, or secrets..."
+      "rule": "Identify hardcoded API keys, passwords, tokens, or secrets. Ignore empty placeholder variables and environment variable names."
+    },
+    {
+      "name": "missing-error-handling",
+      "description": "Ensure async operations have error handling",
+      "enabled": true,
+      "severity": "warning",
+      "rule": "Check that async functions have try-catch blocks or .catch() handlers, and Promise chains include error handling"
     }
   ]
 }
 ```
 
-See [review-config.json](./review-config.json) for complete examples.
-      "rule": "Check that files use camelCase or kebab-case, classes use PascalCase..."
-    },
-    {
-      "name": "deleted-code-blocks",
-      "description": "Detect large blocks of deleted code",
-      "enabled": true,
-      "severity": "error",
-      "rule": "Identify deletions of more than 50 consecutive lines or entire functions..."
-    }
-  ]
-}
-```
+See [review-config.json](./review-config.json) for a complete example with 8 pre-configured checks.
 
 ### Built-in Checks
 
-The tool includes these pre-configured checks in [review-config.json](./review-config.json):
+The default [review-config.json](./review-config.json) includes:
 
 1. **Naming Conventions** - Validates file and variable naming standards
-2. **Deleted Code Blocks** - Flags large code deletions
-3. **Console Log Check** - Detects console.log statements
+2. **Deleted Code Blocks** - Flags large code deletions that might indicate lost functionality
+3. **Console Log Check** - Detects debug logging statements  
 4. **Hardcoded Credentials** - Finds potential security issues
-5. **Missing Error Handling** - Ensures async operations have proper error handling
-6. **TODO Comments** - Flags TODO/FIXME comments
+5. **Missing Error Handling** - Ensures async operations handle errors properly
+6. **TODO Comments** - Flags TODO/FIXME comments for review
 7. **Code Duplication** - Identifies potential duplicate code
-8. **Missing Tests** - Checks if new features include tests
+8. **Missing Tests** - Checks if new features include test files
 
-## Setup
+### Custom Checks
 
-### Prerequisites
+Add your own checks by defining them in natural language:
 
-1. **GitHub Copilot subscription** - Required for AI-powered analysis
-2. **Personal Access Token** with Copilot access:
-   - Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
-   - Generate new token with `copilot` scope
-   - Store as `COPILOT_TOKEN` secret in your repository/pipeline
-
-### CLI Setup
-
-1. **Install the CLI:**
-   ```bash
-   npm install -g pr-reviewer
-   ```
-
-2. **Set your Copilot token:**
-   ```bash
-   export COPILOT_TOKEN="ghp_your_token_here"
-   ```
-
-   Or add to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.):
-   ```bash
-   export COPILOT_TOKEN="ghp_your_token_here"
-   ```
-
-3. **Create a review config** (optional - uses defaults if not found):
-   ```bash
-   # Copy example config to your project
-   curl -o pr-review.config.json https://raw.githubusercontent.com/richorama/pr-reviewer/main/review-config.json
-   ```
-
-4. **Run the review:**
-   ```bash
-   pr-review
-   ```
-
-### CLI Options
-
-```
-pr-review [directory] [options]
-
-Options:
-  --config <path>        Path to review configuration file
-  --output <path>        Save review report to file
-  --fail-on-error        Exit with code 1 if errors found
-  --verbose, -v          Show detailed output
-  --help, -h             Show help message
+```json
+{
+  "checks": [
+    {
+      "name": "accessibility",
+      "description": "Check for accessibility issues in React components",
+      "enabled": true,
+      "severity": "warning",
+      "rule": "Verify that interactive elements have proper ARIA labels, images have alt text, and forms have associated labels"
+    },
+    {
+      "name": "performance",
+      "description": "Identify potential performance issues",
+      "enabled": true,
+      "severity": "info",
+      "rule": "Look for unnecessary re-renders, missing memoization, large bundle imports, or N+1 query patterns"
+    }
+  ]
+}
 ```
 
-### GitHub Actions Setup
+## Use Cases
 
-1. Add `COPILOT_TOKEN` secret:
-   - Repository → Settings → Secrets and variables → Actions
-   - New repository secret: `COPILOT_TOKEN`
-   - Value: Your PAT with Copilot access
+### Pre-Commit Hook
 
-2. The `GITHUB_TOKEN` is automatically provided by GitHub Actions
+Add to `.git/hooks/pre-commit`:
 
-### Azure DevOps Setup
-
-1. Add `COPILOT_TOKEN` as a pipeline variable:
-   - Pipeline → Edit → Variables
-   - Name: `COPILOT_TOKEN`
-   - Value: Your PAT with Copilot access
-   - ✅ Keep this value secret
-
-2. Enable OAuth token access in pipeline YAML:
-   ```yaml
-   jobs:
-     - job: review
-       pool:
-         vmImage: 'ubuntu-latest'
-       steps:
-         - task: PRReviewer@1
-           inputs:
-             copilotToken: $(COPILOT_TOKEN)
-   ```
-
-## Advanced Configuration
-
-### Custom Config Path
-
-Specify a custom config file location:
-
-**GitHub Actions:**
-```yaml
-- uses: richorama/pr-reviewer@v1
-  with:
-    copilot-token: ${{ secrets.COPILOT_TOKEN }}
-    github-token: ${{ secrets.GITHUB_TOKEN }}
-    config-path: './custom/path/review-config.json'
+```bash
+#!/bin/bash
+pr-review --fail-on-error
 ```
 
-**Azure DevOps:**
-```yaml
-- task: PRReviewer@1
-  inputs:
-    copilotToken: $(COPILOT_TOKEN)
-    configPath: './custom/path/review-config.json'
+Make it executable:
+```bash
+chmod +x .git/hooks/pre-commit
 ```
 
-### Disable Fail on Error
+### CI/CD Integration
 
-By default, the tool fails the build when errors are found. To disable:
-
-**GitHub Actions:**
-```yaml
-- uses: richorama/pr-reviewer@v1
-  with:
-    copilot-token: ${{ secrets.COPILOT_TOKEN }}
-    github-token: ${{ secrets.GITHUB_TOKEN }}
-    fail-on-error: false
+```bash
+# In your CI pipeline
+pr-review --fail-on-error --output review-report.md
 ```
 
-**Azure DevOps:**
-```yaml
-- task: PRReviewer@1
-  inputs:
-    copilotToken: $(COPILOT_TOKEN)
-    failOnError: false
+### Team Review Standards
+
+Create a shared `pr-review.config.json` in your repository to enforce consistent code review standards across your team.
+
+### Pre-Release Audit
+
+Before releases, run on main branch to audit entire codebase:
+
+```bash
+git checkout main
+pr-review --verbose --output audit-report.md
 ```
 
-### Disable PR Comments
+## Example Output
 
-To only run checks without posting comments:
+### Console
 
-**GitHub Actions:**
-```yaml
-- uses: richorama/pr-reviewer@v1
-  with:
-    copilot-token: ${{ secrets.COPILOT_TOKEN }}
-    github-token: ${{ secrets.GITHUB_TOKEN }}
-    post-comment: false
 ```
+🤖 AI-Powered Code Review CLI
 
-**Azure DevOps:**
-```yaml
-- task: PRReviewer@1
-  inputs:
-    copilotToken: $(COPILOT_TOKEN)
-    postComment: false
+📂 Working directory: /home/user/my-project
+🌿 Current branch: feature/new-api
+🔍 Comparing against: main
+
+📊 Found 5 changed files to review
+
+Running check: hardcoded-credentials...
+Running check: naming-conventions...
+Running check: missing-error-handling...
+
+============================================================
+📊 Review Summary
+============================================================
+Total checks run: 8
+✅ Passed: 6
+❌ Failed: 2
+
+  Errors:   1
+  Warnings: 1
+  Info:     0
+============================================================
+
+📋 Detailed Results:
+
+❌ ERRORS:
+  [hardcoded-credentials] Potential API key found in code
+    File: src/config.ts:15
+
+⚠️  WARNINGS:
+  [naming-conventions] Variable should use camelCase
+    File: src/user.ts:42
+
+✅ Review completed successfully
 ```
 
 ## Development
@@ -295,11 +256,18 @@ To only run checks without posting comments:
 ### Local Development
 
 ```bash
+# Clone the repository
+git clone https://github.com/richorama/pr-reviewer.git
+cd pr-reviewer
+
 # Install dependencies
 npm install
 
 # Build
 npm run build
+
+# Run locally
+node dist/cli.js
 
 # Run tests
 npm test
@@ -308,169 +276,66 @@ npm test
 npm run test:coverage
 ```
 
-### Package Azure DevOps Extension
+### Project Structure
 
-```bash
-# Build and package extension
-npm run package:azdo
-
-# Output: azure-devops/YOUR_PUBLISHER_ID.pr-reviewer-1.0.0.vsix
+```
+src/
+├── cli.ts                     # CLI entry point
+├── index.ts                   # Main review logic
+├── local/
+│   └── file-reader.ts        # Git file change detection
+├── review/
+│   ├── copilot-api-engine.ts # Copilot API integration
+│   └── reporter.ts           # Report formatting
+└── types/
+    └── index.ts              # TypeScript type definitions
 ```
 
-See [PUBLISHING.md](./PUBLISHING.md) for complete publishing instructions.
+## Troubleshooting
 
-## Architecture
+### "No authentication token found"
 
-- **Core Library** ([src/index.ts](src/index.ts)) - Main review logic with config discovery
-- **GitHub Action Wrapper** ([src/github-action.ts](src/github-action.ts)) - GitHub Actions integration
-- **Azure DevOps Wrapper** ([src/azure-pipelines-task.ts](src/azure-pipelines-task.ts)) - Azure Pipelines integration
-- **Platform Clients** - GitHub ([src/github/client.ts](src/github/client.ts)) and Azure DevOps ([src/azure-devops/client.ts](src/azure-devops/client.ts)) API clients
-- **Review Engine** ([src/review/copilot-api-engine.ts](src/review/copilot-api-engine.ts)) - GitHub Copilot API integration
-- **Reporter** ([src/review/reporter.ts](src/review/reporter.ts)) - Markdown and console report formatting
+Ensure you've set the `COPILOT_TOKEN` environment variable:
+```bash
+export COPILOT_TOKEN="ghp_your_token_here"
+```
+
+### "Directory is not a git repository"
+
+Make sure you're running the command in a git repository:
+```bash
+git init  # If needed
+```
+
+### "No review configuration file found"
+
+Either create a config file or use the `--config` option:
+```bash
+pr-review --config path/to/config.json
+```
+
+### "Authentication failed. Ensure your token has 'copilot' scope"
+
+Your token needs the `copilot` scope. Generate a new token with the correct permissions at [https://github.com/settings/tokens](https://github.com/settings/tokens).
+
+## Requirements
+
+- **Node.js**: >= 18.0.0
+- **GitHub Copilot subscription**: Required for AI-powered analysis
+- **Git**: Must be run in a git repository
 
 ## Contributing
 
 Contributions welcome! Please:
 
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes with tests
 4. Run `npm test` to verify
-5. Submit a pull request
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
 
-## License
-
-MIT
-          echo ${{ secrets.GITHUB_COPILOT_TOKEN }} | gh auth login --with-token
-          gh auth status
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_COPILOT_TOKEN }}
-
-      - name: Install dependencies and build
-        run: |
-          npm ci
-          npm run build
-
-      - name: Run AI Code Review
-        run: |
-          node dist/index.js review \
-            --platform github \
-            --github-token ${{ secrets.GITHUB_TOKEN }} \
-            --owner ${{ github.repository_owner }} \
-            --repository ${{ github.event.repository.name }} \
-            --pr-id ${{ github.event.pull_request.number }} \
-            --post-comment \
-            --output review-report.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Review Report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: pr-review-report
-          path: review-report.md
-```
-
-### Azure DevOps Pipeline
-
-**Setup Steps:**
-1. Get a GitHub PAT from an account with Copilot access (Settings → Developer settings → Personal access tokens)
-2. In Azure DevOps, go to Pipelines → Library → Variable groups (or add directly to pipeline)
-3. Add a variable named `COPILOT_TOKEN` with your PAT value (check "Keep this value secret")
-4. **Grant Build Service permissions:**
-   - Go to **Project Settings** → **Repositories** → Select your repo
-   - Click the **Security** tab
-   - Find **[Project Name] Build Service** (or **Project Collection Build Service**)
-   - Set **Contribute to pull requests** to **Allow**
-5. Use the pipeline below:
-
-See [azure-pipelines.yml](./azure-pipelines.yml) for the complete pipeline configuration.
-
-## Usage
-
-### GitHub Usage
-  --owner $GITHUB_OWNER \
-  --repository $REPOSITORY \
-  --pr-id $PR_ID
-```
-
-### Validate Configuration
-
-```bash
-pr-review validate-config --config ./review-config.json
-```
-
-## Output Examples
-
-### Console Output
-
-```
-================================================================================
-  AI CODE REVIEW REPORT
-================================================================================
-
-Summary: 6/8 checks passed
-  - Errors:   1
-  - Warnings: 1
-  - Info:     0
-
-✓ naming-conventions
-  [WARN ] Consider using camelCase for variable 'user_name'
-         File: src/user.ts:45
-
-✗ deleted-code-blocks
-  [ERROR] Large deletion detected: 120 lines removed from auth module
-         File: src/auth/authenticate.ts
-
-✓ console-log-check
-✓ hardcoded-credentials
-✓ missing-error-handling
-✓ todo-comments
-✓ code-duplication
-✓ missing-tests
-================================================================================
-```
-
-### Markdown Report (Posted to PR)
-
-![Example Report](docs/example-report.png)
-
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Run in development mode (GitHub)
-npm run dev -- review --platform github --github-token ... --owner ... --repository ... --pr-id ...
-
-# Run in development mode (Azure DevOps)
-npm run dev -- review --platform azdo --org-url ... --azdo-pat ... --project ... --repository ... --pr-id ...
-
-# Build
-npm run build
-
-# Run the built version
-node dist/index.js review --platform github ...
-
-# Run tests
-npm test
-```
-
-## Project Structure
-
-```
-.
-├── src/github/
-│   │   └── client.ts          # GitHub API client
-│   ├── 
-│   ├── azure-devops/
-│   │   └── client.ts          # Azure DevOps API client
-│   ├── review/
-│   │   ├── copilot-engine.ts  # Copilot SDK integration
-│   │   └── reporter.ts        # Report formatting
-│   ├── types/
 ## License
 
 MIT
@@ -479,10 +344,9 @@ MIT
 
 Built with:
 - [GitHub Copilot API](https://docs.github.com/en/copilot)
-- [Octokit (GitHub REST API)](https://github.com/octokit/rest.js)
-- [Azure DevOps Node API](https://github.com/microsoft/azure-devops-node-api)
-- [GitHub Actions Toolkit](https://github.com/actions/toolkit)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Node.js](https://nodejs.org/)
 
 ---
 
-**Note**: This tool requires a GitHub Copilot subscription.
+**Made with ❤️ using AI-powered code review**
